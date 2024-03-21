@@ -1,0 +1,19 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+version = "0.0.1"
+name = "thermal-voxel"
+description = 'thermal-voxel'
+readme = "README.md"
+requires-python = ">=3.8"
+keywords = []
+authors = []
+dependencies = []
+
+[tool.hatch.build.targets.wheel]
+packages = ["plenoxels"]
+
+[tool.isort]
+profile = "black"
