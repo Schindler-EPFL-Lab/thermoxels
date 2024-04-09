@@ -12,6 +12,7 @@ keywords = []
 authors = []
 dependencies = []
 
+
 [tool.hatch.build.targets.wheel]
 packages = ["plenoxels"]
 
