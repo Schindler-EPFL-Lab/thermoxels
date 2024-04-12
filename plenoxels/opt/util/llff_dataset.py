@@ -1,5 +1,5 @@
 # LLFF-format Forward-facing dataset loader
-# Please use the LLFF code to run COLMAP & convert 
+# Please use the LLFF code to run COLMAP & convert
 #
 # Adapted from NeX data loading code (NOT using their hand picked bounds)
 # Entry point: LLFFDataset
@@ -360,7 +360,7 @@ class SfMData:
                 return x
         def keep_images(x):
             exts = ['.png', '.jpg', '.jpeg', '.exr']
-            return [y for y in x if not y.startswith('.') and any((y.lower().endswith(ext) for ext in exts))] 
+            return [y for y in x if not y.startswith('.') and any((y.lower().endswith(ext) for ext in exts))]
 
         # get all image of this dataset
         images_path = [os.path.join(scaled_img_dir, f) for f in sorted(keep_images(os.listdir(image_dir)), key=nsvf_sort_key)]

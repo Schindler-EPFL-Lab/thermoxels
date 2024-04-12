@@ -1,7 +1,12 @@
+import sys
+sys.path.append('.')
+sys.path.append('./hot_cubes')
+
 from .nerf_dataset import NeRFDataset
 from .llff_dataset import LLFFDataset
 from .nsvf_dataset import NSVFDataset
 from .co3d_dataset import CO3DDataset
+from hot_cubes.utils.thermo_scene_dataset import ThermoSceneDataset
 from os import path
 
 def auto_dataset(root : str, *args, **kwargs):
@@ -11,6 +16,8 @@ def auto_dataset(root : str, *args, **kwargs):
     elif path.isfile(path.join(root, 'poses_bounds.npy')):
         print("Detected LLFF dataset")
         return LLFFDataset(root, *args, **kwargs)
+    elif path.isfile(path.join(root, "temperature_bounds.json")):
+        return ThermoSceneDataset(root, *args, **kwargs)
     elif path.isfile(path.join(root, 'transforms.json')) or \
          path.isfile(path.join(root, 'transforms_train.json')):
         print("Detected NeRF (Blender) dataset")
@@ -20,9 +27,11 @@ def auto_dataset(root : str, *args, **kwargs):
         return NSVFDataset(root, *args, **kwargs)
 
 datasets = {
-    'nerf': NeRFDataset,
-    'llff': LLFFDataset,
-    'nsvf': NSVFDataset,
-    'co3d': CO3DDataset,
-    'auto': auto_dataset
+    "nerf": NeRFDataset,
+    "llff": LLFFDataset,
+    "nsvf": NSVFDataset,
+    "co3d": CO3DDataset,
+    "ThermoScene": ThermoSceneDataset,
+    "auto": auto_dataset,
 }
+
