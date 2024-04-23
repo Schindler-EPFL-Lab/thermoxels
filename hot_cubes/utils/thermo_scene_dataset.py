@@ -110,16 +110,19 @@ class ThermoSceneDataset(DatasetBase):
         if not self.full_size[0] > 0 and self.full_size[1] > 0:
             raise AssertionError("Empty images")
 
-        self.n_images, self.h, self.w, _ = self.gt.shape
+        self.n_images, self.h_full, self.w_full, _ = self.gt.shape
 
         fx, fy, cx, cy = self.get_intrinsic_parameters()
 
-        self.intrins = Intrin(fx, fy, cx, cy)
+        self.intrins_full = Intrin(fx, fy, cx, cy)
 
         # Rays are not needed for testing
         if self.split == "train":
             self.gen_rays(factor=factor)
             return
+        # Rays are not needed for testing
+        self.h, self.w = self.h_full, self.w_full
+        self.intrins = self.intrins_full
 
     def get_intrinsic_parameters(self) -> float:
 
