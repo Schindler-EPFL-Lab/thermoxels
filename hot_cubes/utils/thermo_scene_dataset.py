@@ -17,7 +17,9 @@ class ThermoSceneDataset(DatasetBase):
 
     focal: float
     c2w: torch.Tensor  # (n_images, 4, 4)
+    c2w_thermal: torch.Tensor  # (n_images, 4, 4)
     gt: torch.Tensor  # (n_images, h, w, 3)
+    gt_thermal: torch.Tensor  # (n_images, h, w, 3)
     h: int
     w: int
     n_images: int
@@ -94,7 +96,7 @@ class ThermoSceneDataset(DatasetBase):
         self.c2w = self.c2w_f64.float()
 
         self.c2w_f64_thermal[:, :3, 3] *= self.scene_scale
-        self.c2w = self.c2w_f64_thermal.float()
+        self.c2w_thermal = self.c2w_f64_thermal.float()
 
         self.gt = torch.stack(all_gt).double() / 255.0
         self.gt_thermal = torch.stack(all_gt_thermal).double() / 255.0
