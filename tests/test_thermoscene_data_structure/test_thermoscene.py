@@ -1,16 +1,16 @@
 import unittest
 from plenoxels.opt.util.dataset import datasets
-from hot_cubes.utils.thermo_scene_dataset import ThermoSceneDataset
+from hot_cubes.datasets.thermo_scene_dataset import ThermoSceneDataset
 import numpy as np
 
 
 class Test_Thermoscene_Dataset(unittest.TestCase):
     def test_thermoscene_dataset(
-        self, data_dir: str = "tests/test_thermoscene_data_structure/mock_dataset"
+        self, data_dir: str = "tests/mock_dataset"
     ) -> None:
 
         dset = datasets["auto"](data_dir, split="train", device="0", epoch_size=1)
-        assert isinstance(dset, ThermoSceneDataset), (
+        self.assertIsInstance(dset, ThermoSceneDataset), (
             "dset is not of type ThermoSceneDataset"
         )
 

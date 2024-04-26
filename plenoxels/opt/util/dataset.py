@@ -6,7 +6,7 @@ from .nerf_dataset import NeRFDataset
 from .llff_dataset import LLFFDataset
 from .nsvf_dataset import NSVFDataset
 from .co3d_dataset import CO3DDataset
-from hot_cubes.utils.thermo_scene_dataset import ThermoSceneDataset
+from hot_cubes.datasets.thermo_scene_dataset import ThermoSceneDataset
 from os import path
 
 def auto_dataset(root : str, *args, **kwargs):

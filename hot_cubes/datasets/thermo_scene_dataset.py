@@ -1,13 +1,15 @@
-from plenoxels.opt.util.util import Rays, Intrin, similarity_from_cameras
+from plenoxels.opt.util.util import Intrin, similarity_from_cameras
 from plenoxels.opt.util.dataset_base import DatasetBase
 import torch
 from os import path
 import os
 import cv2
-import imageio
+import imageio.v2 as imageio
 import numpy as np
 import logging
 from pathlib import Path
+import torch.nn.functional as F
+from hot_cubes.datasets.thermal_util import ThermalRays
 
 
 class ThermoSceneDataset(DatasetBase):
@@ -16,15 +18,14 @@ class ThermoSceneDataset(DatasetBase):
     """
 
     focal: float
-    c2w: torch.Tensor  # (n_images, 4, 4)
     c2w_thermal: torch.Tensor  # (n_images, 4, 4)
     gt: torch.Tensor  # (n_images, h, w, 3)
     gt_thermal: torch.Tensor  # (n_images, h, w, 3)
     h: int
     w: int
     n_images: int
-    rays: Rays | None
-    split: str
+    rays: ThermalRays | None
+    rays_init: ThermalRays | None
 
     def __init__(
         self,
@@ -43,6 +44,7 @@ class ThermoSceneDataset(DatasetBase):
         data_bbox_scale: float = 1.1,  # Only used if normalize_by_bbox
         cam_scale_factor: float = 0.95,
         normalize_by_camera: bool = True,
+        n_images: int | None = None,
         **kwargs,  # TODO : removes when switching to new optimizer script
     ):
         super().__init__()
@@ -98,8 +100,8 @@ class ThermoSceneDataset(DatasetBase):
         self.c2w_f64_thermal[:, :3, 3] *= self.scene_scale
         self.c2w_thermal = self.c2w_f64_thermal.float()
 
-        self.gt = torch.stack(all_gt).double() / 255.0
-        self.gt_thermal = torch.stack(all_gt_thermal).double() / 255.0
+        self.gt = torch.stack(all_gt).float() / 255.0
+        self.gt_thermal = torch.stack(all_gt_thermal).float() / 255.0
 
         if self.gt.size(-1) == 4:
             if white_bkgd:
@@ -107,12 +109,24 @@ class ThermoSceneDataset(DatasetBase):
                 self.gt = self.gt[..., :3] * self.gt[..., 3:] + (1.0 - self.gt[..., 3:])
             else:
                 self.gt = self.gt[..., :3]
+
         self.gt = self.gt.float()
+        self.gt_thermal = self.gt_thermal.float()
 
         if not self.full_size[0] > 0 and self.full_size[1] > 0:
             raise AssertionError("Empty images")
 
         self.n_images, self.h_full, self.w_full, _ = self.gt.shape
+        if n_images is not None:
+            if n_images > self.n_images:
+                logging.info(
+                    f"using {self.n_images} available training views instead of "
+                    f"the requested {n_images}."
+                )
+                n_images = self.n_images
+            self.n_images = n_images
+            self.gt = self.gt[0:n_images, ...]
+            self.c2w = self.c2w[0:n_images, ...]
 
         fx, fy, cx, cy = self.get_intrinsic_parameters()
 
@@ -284,3 +298,27 @@ class ThermoSceneDataset(DatasetBase):
             if path.isdir(path.join(base_path, cand)):
                 return base_path / Path(cand)
         assert False, "None of " + str(candidates) + " found in data directory"
+
+    def _generate_rays(self, dirs: torch.Tensor, factor: float = 1.0) -> ThermalRays:
+
+        rgb_rays = super()._generate_rays(dirs=dirs, factor=factor)
+
+        if factor != 1:
+            gt_thermal = F.interpolate(
+                self.gt_thermal.permute([0, 3, 1, 2]),
+                size=(self.h, self.w),
+                mode="area",
+            ).permute([0, 2, 3, 1])
+            gt_thermal = gt_thermal.reshape(self.n_images, -1, 1)
+        else:
+            gt_thermal = self.gt_thermal.reshape(self.n_images, -1, 3)
+
+        if self.split == "train":
+            gt_thermal = gt_thermal.reshape(-1, 3)
+
+        return ThermalRays(
+            origins=rgb_rays.origins,
+            dirs=rgb_rays.dirs,
+            gt=rgb_rays.gt,
+            gt_thermal=gt_thermal,
+        )
