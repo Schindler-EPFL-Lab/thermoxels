@@ -139,10 +139,10 @@ class ThermoSceneDataset(DatasetBase):
         return fx, fy, cx, cy
 
     def normalize_by_camera(self, cam_scale_factor: float) -> float:
-        norm_pose_files = sorted(os.listdir(self.root / self.pose_dir_name))
+        norm_pose_files = sorted(os.listdir(self.pose_dir_name))
         norm_poses = np.stack(
             [
-                np.loadtxt((self.root / self.pose_dir_name / Path(x))).reshape(-1, 4)
+                np.loadtxt((self.pose_dir_name / Path(x))).reshape(-1, 4)
                 for x in norm_pose_files
             ],
             axis=0,
@@ -199,7 +199,7 @@ class ThermoSceneDataset(DatasetBase):
             image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
 
         pose_fname = path.splitext(img_fname)[0] + ".txt"
-        pose_path = path.join(self.root, self.pose_dir_name, pose_fname)
+        pose_path = path.join(self.pose_dir_name, pose_fname)
         cam_mtx = np.loadtxt(pose_path).reshape(-1, 4)
         if len(cam_mtx) == 3:
             bottom = np.ndarray([[0.0, 0.0, 0.0, 1.0]])
