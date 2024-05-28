@@ -1,6 +1,6 @@
 import torch
 import argparse
-from util.dataset import datasets
+from plenoxels.opt.util.dataset import datasets
 import json
 
 
