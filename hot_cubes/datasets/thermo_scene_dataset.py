@@ -4,7 +4,7 @@ import torch
 from os import path
 import os
 import cv2
-import imageio.v2 as imageio
+import imageio
 import numpy as np
 import logging
 from pathlib import Path
