@@ -4,12 +4,14 @@ from pathlib import Path
 
 import numpy as np
 import trimesh
+import matplotlib.pyplot as plt
 
 
 def convert_to_stl(
     npz_file_path: Path,
     percentile_threshold: float = 90,
     density_threshold: float | None = None,
+    put_colors: bool = False,
 ) -> None:
     """
     Exports a svox2.SparseGrid saved as an npz file to a mesh stl file.
@@ -44,7 +46,28 @@ def convert_to_stl(
 
     # Marching cubes algorithm from trimesh:
     mesh = trimesh.voxel.ops.matrix_to_marching_cubes(thresholded_grid)
-    output_file = str(npz_file_path).split(".")[0] + "_output_mesh.stl"
+
+    # Assign gray colors to the mesh
+    mesh.visual.face_colors = [217, 217, 214]
+
+    if put_colors:
+        # Use the temperature values to color the mesh
+        temp_vector = data["temperature_data"][idxs][:, 0]
+        temperature = plt.cm.plasma(temp_vector)
+        colors = np.zeros(grid.shape + (3,))
+        colors[mask] = temperature[:, :3]
+
+        # Assign colors to each face based on the voxel indices
+        face_centroids = mesh.vertices[mesh.faces].mean(axis=1)
+        voxel_indices = np.round(face_centroids).astype(int)
+        voxel_indices = np.clip(voxel_indices, 0, grid.shape[0] - 1)
+        face_colors = colors[
+            voxel_indices[:, 0], voxel_indices[:, 1], voxel_indices[:, 2]
+        ]
+        mesh.visual.face_colors = face_colors
+
+    # Export the mesh to a ply file
+    output_file = str(npz_file_path).split(".")[0] + "_output_mesh.ply"
     mesh.export(output_file)
 
     logging.info(f"Mesh successfully exported to {output_file}")
@@ -70,9 +93,18 @@ if __name__ == "__main__":
         help="percentile threshold ",
     )
 
+    parser.add_argument(
+        "--colors",
+        metavar=bool,
+        default=False,
+        required=False,
+        help="put colors in the mesh",
+    )
+
     args = parser.parse_args()
 
     convert_to_stl(
         npz_file_path=Path(args.npz_file),
         percentile_threshold=float(args.percentile_threshold),
+        put_colors=args.colors,
     )
