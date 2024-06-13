@@ -5,14 +5,15 @@ import statistics
 import sys
 from pathlib import Path
 
-import hot_cubes.svox2_tmp as svox2
 import imageio
 import mlflow
 import numpy as np
 import torch
 from skimage.metrics import structural_similarity
 
+import hot_cubes.svox2_temperature as svox2
 from hot_cubes.renderer_evaluator.render_param import RenderParam
+from hot_cubes.renderer_evaluator.thermal_evaluation_metrics import compute_hssim
 from plenoxels.opt.util.dataset_base import DatasetBase
 
 sys.path.append("../../plenoxels/opt")
@@ -34,7 +35,11 @@ class Evaluator:
             )  # Slow to load
             self.lpips_list: list[float] = []
 
-        self._grid = svox2.SparseGrid.load(self._param.ckpt, device=self._device)
+        self._grid = svox2.SparseGrid.load(
+            self._param.ckpt,
+            device=self._device,
+            include_temperature=self._param.include_temperature,
+        )
 
         if self._grid.use_background:
             if self._param.nobg:
@@ -79,6 +84,22 @@ class Evaluator:
         )
 
         return mse_num, psnr, ssim
+
+    @staticmethod
+    def compute_thermal_metrics(
+        im_thermal: torch.Tensor, im_gt_thermal: torch.Tensor
+    ) -> tuple[float, float, float, float]:
+
+        mse_map = (im_thermal.cpu() - im_gt_thermal.cpu()) ** 2
+        mse_num = mse_map.mean().item()
+        psnr_thermal = -10.0 * math.log10(mse_num)
+        mae = torch.abs(im_thermal.cpu() - im_gt_thermal.cpu()).mean()
+
+        hssim = compute_hssim(
+            im_thermal.cpu().unsqueeze(-1), im_gt_thermal.cpu().unsqueeze(-1)
+        )
+
+        return mse_num, psnr_thermal, mae, hssim
 
     def compute_lpips(self, im: torch.Tensor, im_gt: torch.Tensor) -> float:
         lpips = self._lpips_vgg(
@@ -126,38 +147,49 @@ class Evaluator:
                     cam,
                     use_kernel=True,
                     return_raylen=self._param.ray_len,
-                    include_temperature=True,
                 )
 
                 im.clamp(0.0, 1.0)
                 im_gt = dataset.gt[img_id].to(device=self._device)
 
-                im_thermal.clamp(0.0, 1.0)
-                im_gt_thermal = dataset.gt_thermal[img_id].to(device=self._device)
-
                 _, psnr_rgb, ssim_rgb = Evaluator.compute_mse_psnr_ssim(im, im_gt)
                 self.psnr_list.append(psnr_rgb)
                 self.ssim_list.append(ssim_rgb)
 
-                mlflow.log_metric("PSNR on test", psnr_rgb)
-                mlflow.log_metric("SSIM on test", ssim_rgb)
-                logging.info(img_id, "PSNR", psnr_rgb, "SSIM", ssim_rgb)
+                mlflow.log_metric("RGB PSNR on test", psnr_rgb)
+                mlflow.log_metric("RGB SSIM on test", ssim_rgb)
+                logging.info(img_id, "RGB PSNR", psnr_rgb, "RGB SSIM", ssim_rgb)
+
+                im_thermal = im_thermal.clamp(0.0, 1.0)
+                im_thermal = torch.squeeze(im_thermal, dim=2)
+                im_gt_thermal = dataset.gt_thermal[img_id].cpu().mean(axis=2)
+
+                _, psnr_thermal, mae_thermal, hssim_thermal = (
+                    self.compute_thermal_metrics(im_thermal, im_gt_thermal)
+                )
+
+                mlflow.log_metric("Thermal PSNR on test", psnr_thermal)
+                mlflow.log_metric("Thermal HSSIM on test", hssim_thermal)
+                mlflow.log_metric("Thermal MAE on test", mae_thermal)
+
+                logging.info(
+                    img_id, "Thermal PSNR", psnr_thermal, "Thermal SSIM", hssim_thermal
+                )
 
                 if self._param.lpips:
                     lpips_i = self.compute_lpips(im, im_gt)
                     self.lpips_list.append(lpips_i)
 
-                    mlflow.log_metric("LPIPS on test", lpips_i)
-                    logging.info(img_id, "LPIPS", lpips_i)
+                    mlflow.log_metric("RGB LPIPS on test", lpips_i)
+                    logging.info(img_id, "RGB LPIPS", lpips_i)
 
-                im = im.cpu().numpy()
-                concat_rgb_im = np.concatenate([im_gt.cpu().numpy(), im], axis=1)
+                concat_rgb_im = np.concatenate(
+                    [im_gt.cpu().numpy(), im.cpu().numpy()], axis=1
+                )
                 concat_rgb_im = (concat_rgb_im * 255).astype(np.uint8)
 
-                im_thermal = im_thermal.cpu().numpy()
-
                 concat_im_thermal = np.concatenate(
-                    [im_gt_thermal.cpu().numpy().mean(axis=2), im_thermal.squeeze(-1)],
+                    [im_gt_thermal.numpy(), im_thermal.cpu().numpy()],
                     axis=1,
                 )
                 concat_im_thermal = (concat_im_thermal * 255).astype(np.uint8)
@@ -176,21 +208,21 @@ class Evaluator:
             avg_psnr, std_psnr = statistics.fmean(self.psnr_list), statistics.stdev(
                 self.psnr_list
             )
-            mlflow.log_metric("AVERAGE PSNR on test", avg_psnr)
-            mlflow.log_metric("STD PSNR on test", std_psnr)
+            mlflow.log_metric("Mean RGB PSNR on test", avg_psnr)
+            mlflow.log_metric("STD RGB PSNR on test", std_psnr)
 
             avg_ssim, std_ssim = statistics.fmean(self.ssim_list), statistics.stdev(
                 self.ssim_list
             )
-            mlflow.log_metric("AVERAGE SSIM on test", avg_ssim)
-            mlflow.log_metric("STD SSIM on test", std_ssim)
+            mlflow.log_metric("Mean RGB SSIM on test", avg_ssim)
+            mlflow.log_metric("STD RGB SSIM on test", std_ssim)
 
             if self._param.lpips:
                 avg_lpips, std_lpips = statistics.fmean(
                     self.lpips_list
                 ), statistics.stdev(self.lpips_list)
-                mlflow.log_metric("AVERAGE LPIPS on test", avg_lpips)
-                mlflow.log_metric("STD LPIPS on test", std_lpips)
+                mlflow.log_metric("Mean RGB LPIPS on test", avg_lpips)
+                mlflow.log_metric("STD RGB LPIPS on test", std_lpips)
 
             if not self._param.vidsave and len(video_frames):
                 vid_path = self._param.render_dir + ".mp4"
@@ -201,9 +233,9 @@ class Evaluator:
 
     def save_metric(self, log_only: bool = False) -> None:
         all_metrics = {
-            "psnr": self.psnr_list,
-            "ssim": self.ssim_list,
-            "lpips": self.lpips_list if self._param.lpips else [],
+            "RGB psnr": self.psnr_list,
+            "RGB ssim": self.ssim_list,
+            "RGB lpips": self.lpips_list if self._param.lpips else [],
         }
         mlflow.log_dict(all_metrics, "metrics")
         if log_only:

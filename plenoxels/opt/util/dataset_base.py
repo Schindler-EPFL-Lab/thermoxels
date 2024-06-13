@@ -1,6 +1,8 @@
+from typing import Union, Optional, List
+
 import torch
 import torch.nn.functional as F
-from typing import Union, Optional, List
+
 from .util import select_or_shuffle_rays, Rays, Intrin
 
 

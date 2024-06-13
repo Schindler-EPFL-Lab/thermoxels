@@ -1,8 +1,10 @@
 import argparse
 import json
 import sys
+from dataclasses import asdict
 from pathlib import Path
 
+import mlflow
 import numpy as np
 import torch
 
@@ -42,8 +44,10 @@ def get_arg() -> Param:
     )
     with open(param.config_file, "r") as config_file:
         configs = json.load(config_file)
+    mlflow.log_dict(configs, "config")
 
     param.update_from_dict(configs)
+    mlflow.log_dict(asdict(param), "param")
     assert param.lr_sigma_final <= param.lr_sigma, "lr_sigma must be >= lr_sigma_final"
     assert param.lr_sh_final <= param.lr_sh, "lr_sh must be >= lr_sh_final"
     assert param.lr_basis_final <= param.lr_basis, "lr_basis must be >= lr_basis_final"
@@ -75,9 +79,7 @@ def main():
 
     trainer = ThermoxelTrainer(dataset=dataset, dataset_val=dataset_val, param=param)
 
-    trainer.optimize(
-        param=param, dataset=dataset, factor=factor, dataset_val=dataset_val
-    )
+    trainer.optimize(factor=factor)
 
 
 if __name__ == "__main__":

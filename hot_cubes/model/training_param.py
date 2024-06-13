@@ -13,7 +13,7 @@ class Param:
     data_dir: str
     render_dir: str = "./"
     config_file: str | None = None
-    train_dir: str = "ckpt"
+    train_dir: str = "./"
 
     # General settings
     reso: str = "[[256, 256, 256], [512, 512, 512]]"
@@ -22,7 +22,7 @@ class Param:
     init_iters: int = 0
     upsample_density_add: float = 0.0
     include_temperature: bool = True
-    dataset_type: str = "auto"
+    dataset_type: str = "ThermoScene"
     scene_scale: float = 1.0
     scale: float = 1.0
     seq_id: int = 1000
@@ -41,6 +41,7 @@ class Param:
 
     # Optimization settings
     n_epoch: int = 5
+    n_iters: int = 0
     batch_size: int = 5000
     sigma_optim: str = "rmsprop"
     sh_optim: str = "rmsprop"
@@ -70,6 +71,11 @@ class Param:
     lr_color_bg_decay_steps: int = 250000
     lr_color_bg_delay_steps: int = 0
     lr_color_bg_delay_mult: float = 1e-2
+    lr_temperature: float = 1e0
+    lr_temperature_final: float = 1e-2
+    lr_temperature_decay_steps: int = 250000
+    lr_temperature_delay_steps: int = 0
+    lr_temperature_delay_mult: float = 1e-2
 
     lr_basis: float = 1e-6
     lr_basis_final: float = 1e-6
@@ -81,6 +87,7 @@ class Param:
 
     # Logging and evaluations
     log_per_epoch: int = 2
+    print_every: int = 20
     save_every: int = 5
     eval_every: int = 1
     init_sigma: float = 0.1
@@ -104,7 +111,7 @@ class Param:
     tv_sparsity: float = 0.01
     tv_logalpha: bool = False
     lambda_tv_sh: float = 1e-3
-    lambda_tv_temp: float = 1e-3
+    lambda_tv_temp: float = 1e-6
     lambda_tv_lumisphere: float = 0.0
     tv_lumisphere_sparsity: float = 0.01
     tv_lumisphere_dir_factor: float = 0.0
@@ -122,13 +129,13 @@ class Param:
     weight_decay_sh: float = 1.0
     lr_decay: bool = True
     n_train: int | None = None
-    nosphereinit: bool = False
+    nosphereinit: bool = True
     tv_sh_sparsity: float = 0.01
     tv_temp_sparsity: float = 0.01
-    t_loss: float = 0.01
+    t_loss: float = 0.0
 
     # Rendering settings
-    white_bkgd: bool = True
+    white_bkgd: bool = False
     llffhold: int = 8
     normalize_by_bbox: bool = False
     data_bbox_scale: float = 1.2
@@ -139,6 +146,7 @@ class Param:
     sigma_thresh: float = 1e-8
     stop_thresh: float = 1e-7
     background_brightness: float = 1.0
+    background_temperature: float = 1.0
     renderer_backend: str = "cuvol"
     random_sigma_std: float = 0.0
     random_sigma_std_background: float = 0.0

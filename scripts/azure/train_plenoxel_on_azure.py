@@ -17,7 +17,7 @@ class EvalParameters:
 
     @property
     def environment(self) -> str:
-        return "plenoxel-310"
+        return "thermoxel-newtempfield-310"
 
 
 def main() -> None:
@@ -25,7 +25,7 @@ def main() -> None:
 
     ml_client = get_client()
 
-    data_asset = ml_client.data.get("buildingA_winter-plenoxel", version="1")
+    data_asset = ml_client.data.get("buildingA_spring-plenoxel", version="1")
 
     job_name = "train-plenoxel--" + datetime.now().strftime("%d-%m-%Y-%H%M%S")
 
@@ -43,7 +43,7 @@ def main() -> None:
         command=(
             "python3.10 plenoxels/opt/opt.py ${{inputs.data}} "
             "--train_dir ./ "
-            "-c plenoxels/opt/configs/tnt.json "
+            "-c plenoxels/opt/configs/thermoscene.json "
         ),
         experiment_name=params.experiment_name + "plenoxel",
         display_name=job_name,

@@ -12,7 +12,7 @@ import torch.cuda
 import torch.optim
 from tqdm import tqdm
 
-import hot_cubes.svox2_tmp as svox2
+import hot_cubes.svox2_temperature as svox2
 from hot_cubes.model.training_param import Param
 from hot_cubes.renderer_evaluator.model_evaluator import Evaluator
 from hot_cubes.renderer_evaluator.render_param import RenderParam
@@ -24,6 +24,7 @@ from plenoxels.opt.util.util import get_expon_lr_func, viridis_cmap
 sys.path.append(".")
 sys.path.append("./hot_cubes")
 device = "cuda" if torch.cuda.is_available() else "cpu"
+# logging.basicConfig(level=logging.INFO)
 
 
 class ThermoxelTrainer:
@@ -40,8 +41,7 @@ class ThermoxelTrainer:
         self.grid = svox2.SparseGrid(
             reso=self.resolution_list[resolution_id],
             center=dataset.scene_center,
-            radius=dataset.scene_radius,
-            use_sphere_bound=dataset.use_sphere_bound and not self._param.nosphereinit,
+            radius=self.dataset.scene_radius,
             basis_dim=self._param.sh_dim,
             use_z_order=True,
             device=device,
@@ -51,6 +51,7 @@ class ThermoxelTrainer:
             mlp_width=self._param.mlp_width,
             background_nlayers=self._param.background_nlayers,
             background_reso=self._param.background_reso,
+            include_temperature=self._param.include_temperature,
         )
 
         self._lr_sigma_func = get_expon_lr_func(
@@ -82,29 +83,33 @@ class ThermoxelTrainer:
             self._param.lr_color_bg_delay_mult,
             self._param.lr_color_bg_decay_steps,
         )
+        self._lr_temperature_func = get_expon_lr_func(
+            self._param.lr_temperature,
+            self._param.lr_temperature_final,
+            self._param.lr_temperature_delay_steps,
+            self._param.lr_temperature_delay_mult,
+            self._param.lr_temperature_decay_steps,
+        )
 
         self.ckpt_path = Path(self._param.train_dir) / Path("ckpt.npz")
 
     def optimize(
         self,
-        param: Param,
-        dataset: datasets,
         factor: float,
-        dataset_val: datasets,
         use_sparsify: bool = True,
     ) -> None:
 
         # DC -> gray; mind the SH scaling!
         self.grid.sh_data.data[:] = 0.0
         self.grid.density_data.data[:] = (
-            0.0 if param.lr_fg_begin_step > 0 else param.init_sigma
+            0.0 if self._param.lr_fg_begin_step > 0 else self._param.init_sigma
         )
 
         if self.grid.use_background:
-            self.grid.background_data.data[..., -1] = param.init_sigma_bg
+            self.grid.background_data.data[..., -1] = self._param.init_sigma_bg
 
         self.grid.requires_grad_(True)
-        config_util.setup_render_opts(self.grid.opt, param)
+        config_util.setup_render_opts(self.grid.opt, self._param)
         logging.info("Render options", self.grid.opt)
 
         resolution_id = 0
@@ -112,53 +117,50 @@ class ThermoxelTrainer:
         resample_cameras = [
             svox2.Camera(
                 c2w.to(device=device),
-                dataset.intrins.get("fx", i),
-                dataset.intrins.get("fy", i),
-                dataset.intrins.get("cx", i),
-                dataset.intrins.get("cy", i),
-                width=dataset.get_image_size(i)[1],
-                height=dataset.get_image_size(i)[0],
-                ndc_coeffs=dataset.ndc_coeffs,
+                self.dataset.intrins.get("fx", i),
+                self.dataset.intrins.get("fy", i),
+                self.dataset.intrins.get("cx", i),
+                self.dataset.intrins.get("cy", i),
+                width=self.dataset.get_image_size(i)[1],
+                height=self.dataset.get_image_size(i)[0],
+                ndc_coeffs=self.dataset.ndc_coeffs,
             )
-            for i, c2w in enumerate(dataset.c2w)
+            for i, c2w in enumerate(self.dataset.c2w)
         ]
 
-        last_upsamp_step = param.init_iters
+        last_upsamp_step = self._param.init_iters
 
-        if param.enable_random:
+        if self._param.enable_random:
             logging.warn(
                 "Randomness is enabled for training "
                 "(normal for LLFF & scenes with background)"
             )
 
-        for gstep_id_base in range(param.n_epoch):
-            dataset.shuffle_rays()
-            # epoch_size = dataset.rays.origins.size(0)
-            # batches_per_epoch = (epoch_size - 1) // param.batch_size + 1
+        for gstep_id_base in range(self._param.n_epoch):
+            logging.info("reso_id", resolution_id)
+            self.dataset.shuffle_rays()
 
             self.train_step(
                 gstep_id_base=gstep_id_base,
             )
             gc.collect()
-            # gstep_id_base += batches_per_epoch
 
             # Overwrite prev checkpoints since they are very huge
             if (
-                param.save_every > 0
-                and (gstep_id_base + 1) % max(factor, param.save_every) == 0
-                and not param.tune_mode
+                self._param.save_every > 0
+                and (gstep_id_base + 1) % max(factor, self._param.save_every) == 0
+                and not self._param.tune_mode
             ):
                 logging.info("Saving", self.ckpt_path)
                 self.grid.save(self.ckpt_path)
 
-            if (gstep_id_base - last_upsamp_step) < param.upsamp_every:
+            if (gstep_id_base - last_upsamp_step) < self._param.upsamp_every:
                 continue
 
             last_upsamp_step = gstep_id_base
 
             if resolution_id >= len(self.resolution_list) - 1:
                 continue
-            resolution_id += 1
 
             logging.info(
                 "* Upsampling from",
@@ -166,13 +168,14 @@ class ThermoxelTrainer:
                 "to",
                 self.resolution_list[resolution_id + 1],
             )
-            if param.tv_early_only > 0:
+            resolution_id += 1
+            if self._param.tv_early_only > 0:
                 logging.info("turning off TV regularization")
-                param.lambda_tv = 0.0
-                param.lambda_tv_sh = 0.0
-            elif param.tv_decay != 1.0:
-                param.lambda_tv *= param.tv_decay
-                param.lambda_tv_sh *= param.tv_decay
+                self._param.lambda_tv = 0.0
+                self._param.lambda_tv_sh = 0.0
+            elif self._param.tv_decay != 1.0:
+                self._param.lambda_tv *= self._param.tv_decay
+                self._param.lambda_tv_sh *= self._param.tv_decay
 
             z_reso = (
                 self.resolution_list[resolution_id]
@@ -182,18 +185,22 @@ class ThermoxelTrainer:
 
             self.grid.resample(
                 reso=self.resolution_list[resolution_id],
-                sigma_thresh=param.density_thresh,
-                weight_thresh=(param.weight_thresh / z_reso if use_sparsify else 0.0),
+                sigma_thresh=self._param.density_thresh,
+                weight_thresh=(
+                    self._param.weight_thresh / z_reso if use_sparsify else 0.0
+                ),
                 dilate=2,  # use_sparsify,
-                cameras=(resample_cameras if param.thresh_type == "weight" else None),
-                max_elements=param.max_self.grid_elements,
+                cameras=(
+                    resample_cameras if self._param.thresh_type == "weight" else None
+                ),
+                max_elements=self._param.max_grid_elements,
             )
 
             if self.grid.use_background and resolution_id <= 1:
-                self.grid.sparsify_background(param.background_density_thresh)
+                self.grid.sparsify_background(self._param.background_density_thresh)
 
-            if param.upsample_density_add:
-                self.grid.density_data.data[:] += param.upsample_density_add
+            if self._param.upsample_density_add:
+                self.grid.density_data.data[:] += self._param.upsample_density_add
 
             if factor > 1:
                 logging.info(
@@ -201,14 +208,15 @@ class ThermoxelTrainer:
                     factor,
                 )
                 factor //= 2
-                dataset.gen_rays(factor=factor)
-                dataset.shuffle_rays()
+                self.dataset.gen_rays(factor=factor)
+                self.dataset.shuffle_rays()
 
-        logging.info("* Final eval and save")
+        logging.info("* Final eval and save ")
 
         self.eval_step()
-        if not param.tune_nosave:
+        if not self._param.tune_nosave:
             self.grid.save(self.ckpt_path)
+            mlflow.log_artifact(self.ckpt_path)
             self.test_step()
 
     def train_step(
@@ -218,7 +226,10 @@ class ThermoxelTrainer:
         epoch_size = self.dataset.rays.origins.size(0)
         batches_per_epoch = (epoch_size - 1) // self._param.batch_size + 1
 
-        lr_sigma_factor, lr_sh_factor, lr_basis_factor = 1.0, 1.0, 1.0
+        lr_sigma_factor = 1.0
+        lr_sh_factor = 1.0
+        lr_basis_factor = 1.0
+        lr_temperature_factor = 1.0
 
         logging.info("Train step")
 
@@ -227,7 +238,14 @@ class ThermoxelTrainer:
             total=batches_per_epoch,
         )
 
-        train_stats = {"Train_mse": 0.0, "Train_psnr": 0.0, "Train_invsqr_mse": 0.0}
+        train_stats = {
+            "Train_rgb_mse": 0.0,
+            "Train_rgb_psnr": 0.0,
+            "Train_invsqr_rgb_mse": 0.0,
+            "Train_thermal_mse": 0.0,
+            "Train_thermal_psnr": 0.0,
+            "Train_invsqr_thermal_mse": 0.0,
+        }
 
         for iter_id, batch_begin in pbar:
             gstep_id = iter_id + gstep_id_base * batches_per_epoch
@@ -238,6 +256,7 @@ class ThermoxelTrainer:
                 self.grid.density_data.data[:] = self._param.init_sigma
             lr_sigma = self._lr_sigma_func(gstep_id) * lr_sigma_factor
             lr_sh = self._lr_sh_func(gstep_id) * lr_sh_factor
+            lr_temperature = self._lr_temperature_func(gstep_id) * lr_temperature_factor
             lr_sigma_bg = (
                 self._lr_sigma_bg_func(gstep_id - self._param.lr_basis_begin_step)
                 * lr_basis_factor
@@ -246,6 +265,7 @@ class ThermoxelTrainer:
                 self._lr_color_bg_func(gstep_id - self._param.lr_basis_begin_step)
                 * lr_basis_factor
             )
+
             if not self._param.lr_decay:
                 lr_sigma = self._param.lr_sigma * lr_sigma_factor
                 lr_sh = self._param.lr_sh * lr_sh_factor
@@ -261,39 +281,59 @@ class ThermoxelTrainer:
             #  ThermalRays is used
             rays = svox2.Rays(batch_origins, batch_dirs)
 
-            rgb_pred, temp_pred = self.grid.volume_render_fused_rgbt(
-                rays, rgb_gt, thermal_gt, t_loss=self._param.t_loss
-            )
+            if self._param.include_temperature:
+                rgb_pred, temp_pred = self.grid.volume_render_fused_rgbt(
+                    rays=rays,
+                    rgb_gt=rgb_gt,
+                    temp_gt=thermal_gt,
+                    t_loss=self._param.t_loss,
+                    beta_loss=self._param.lambda_beta,
+                    sparsity_loss=self._param.lambda_sparsity,
+                )
+            else:
+                rgb_pred, temp_pred = self.grid.volume_render_fused(
+                    rays=rays,
+                    rgb_gt=rgb_gt,
+                    temp_gt=thermal_gt,
+                    t_loss=self._param.t_loss,
+                    beta_loss=self._param.lambda_beta,
+                    sparsity_loss=self._param.lambda_sparsity,
+                    randomize=self._param.enable_random,
+                )
 
             _, rgb_mse, rgb_psnr = ThermoxelTrainer.compute_mse_psnr(rgb_gt, rgb_pred)
-            ThermoxelTrainer.update_stats_with_mse_psnr(rgb_mse, rgb_psnr, train_stats)
+            ThermoxelTrainer.update_stats_with_mse_psnr(
+                rgb_mse, rgb_psnr, train_stats, False
+            )
 
             _, thermal_mse, thermal_psnr = ThermoxelTrainer.compute_mse_psnr(
                 thermal_gt, temp_pred
+            )
+            ThermoxelTrainer.update_stats_with_mse_psnr(
+                thermal_mse, thermal_psnr, train_stats, True
             )
 
             # Stats
             log_every = self._param.epoch_size // self._param.log_per_epoch
             if (iter_id + 1) % log_every == 0:
                 # Print averaged stats
-                pbar.set_description(f"epoch {gstep_id_base} psnr={rgb_psnr:.2f}")
+                pbar.set_description(
+                    f"epoch {gstep_id_base} RGB-psnr={rgb_psnr:.2f} "
+                    f"Thermal-psnr={thermal_psnr:.2f}"
+                )
 
                 for stat_name in train_stats:
                     stat_val = train_stats[stat_name] / log_every
-                    mlflow.log_metric("train" + stat_name, stat_val)
+                    mlflow.log_metric(stat_name, stat_val)
                     train_stats[stat_name] = 0.0
-
+            if (iter_id + 1) % self._param.print_every == 0:
                 if self._param.weight_decay_sh < 1.0:
                     self.grid.sh_data.data *= self._param.weight_decay_sigma
                 if self._param.weight_decay_sigma < 1.0:
                     self.grid.density_data.data *= self._param.weight_decay_sh
 
             self.add_regularizers(
-                gstep_id,
-                lr_sigma,
-                lr_sh,
-                lr_sigma_bg,
-                lr_color_bg,
+                gstep_id, lr_sigma, lr_sh, lr_sigma_bg, lr_color_bg, lr_temperature
             )
 
     def add_regularizers(
@@ -303,6 +343,7 @@ class ThermoxelTrainer:
         lr_sh: float,
         lr_sigma_bg: float,
         lr_color_bg: float,
+        lr_temperature: float,
     ) -> None:
         # Apply TV/Sparsity regularizers
         if self._param.lambda_tv > 0.0:
@@ -316,12 +357,31 @@ class ThermoxelTrainer:
                 contiguous=self._param.tv_contiguous,
             )
         if self._param.lambda_tv_sh > 0.0:
-            #  with Timing("tv_color_inpl"):
             self.grid.inplace_tv_color_grad(
                 self.grid.sh_data.grad,
                 scaling=self._param.lambda_tv_sh,
                 sparse_frac=self._param.tv_sh_sparsity,
                 ndc_coeffs=self.dataset.ndc_coeffs,
+                contiguous=self._param.tv_contiguous,
+            )
+        if self._param.lambda_tv_temp > 0.0:
+            self.grid.inplace_tv_temperature_grad(
+                self.grid.temperature_data.grad,
+                scaling=self._param.lambda_tv_temp,
+                sparse_frac=self._param.tv_temp_sparsity,
+                ndc_coeffs=self.dataset.ndc_coeffs,
+                contiguous=self._param.tv_contiguous,
+            )
+
+        if (
+            self._param.lambda_tv_background_sigma > 0.0
+            or self._param.lambda_tv_background_color > 0.0
+        ):
+            self.grid.inplace_tv_background_grad(
+                self.grid.background_data.grad,
+                scaling=self._param.lambda_tv_background_color,
+                scaling_density=self._param.lambda_tv_background_sigma,
+                sparse_frac=self._param.tv_background_sparsity,
                 contiguous=self._param.tv_contiguous,
             )
 
@@ -332,6 +392,9 @@ class ThermoxelTrainer:
             )
             self.grid.optim_sh_step(
                 lr_sh, beta=self._param.rms_beta, optim=self._param.sh_optim
+            )
+            self.grid.optim_temperature_step(
+                lr_temperature, beta=self._param.rms_beta, optim=self._param.temp_optim
             )
 
         if self.grid.use_background:
@@ -349,7 +412,12 @@ class ThermoxelTrainer:
         # Put in a function to avoid memory leak
         logging.info("Eval step")
         with torch.no_grad():
-            stats_val = {"Eval_psnr": 0.0, "Eval_mse": 0.0}
+            stats_val = {
+                "Eval_rgb_psnr": 0.0,
+                "Eval_rgb_mse": 0.0,
+                "Eval_thermal_psnr": 0.0,
+                "Eval_thermal_mse": 0.0,
+            }
             img_ids = range(0, self.dataset_val.n_images, 1)
             for i, img_id in tqdm(enumerate(img_ids), total=len(img_ids)):
                 # rgb_pred_val = rgb_gt_val = None
@@ -369,7 +437,6 @@ class ThermoxelTrainer:
                 rgb_pred_val, thermal_pred_val = self.grid.volume_render_image(
                     cam,
                     use_kernel=True,
-                    include_temperature=self._param.include_temperature,
                 )
 
                 rgb_gt_val = self.dataset_val.gt[img_id].cpu()
@@ -385,11 +452,14 @@ class ThermoxelTrainer:
                     rgb_gt_val, rgb_pred_val
                 )
                 all_mses_thermal, mse_thermal_num, thermal_psnr = (
-                    ThermoxelTrainer.compute_mse_psnr(rgb_gt_val, rgb_pred_val)
+                    ThermoxelTrainer.compute_mse_psnr(thermal_gt_val, thermal_pred_val)
                 )
 
                 ThermoxelTrainer.update_stats_with_mse_psnr(
-                    mse_rgb_num, rgb_psnr, stats_val
+                    mse_rgb_num, rgb_psnr, stats_val, False
+                )
+                ThermoxelTrainer.update_stats_with_mse_psnr(
+                    mse_thermal_num, thermal_psnr, stats_val, True
                 )
 
                 if not to_log:
@@ -437,8 +507,10 @@ class ThermoxelTrainer:
                         f"outputs/val_depth_map_{img_id:04d}.png",
                     )
 
-            stats_val["Eval_mse"] /= self.dataset_val.n_images
-            stats_val["Eval_psnr"] /= self.dataset_val.n_images
+            stats_val["Eval_rgb_mse"] /= self.dataset_val.n_images
+            stats_val["Eval_rgb_psnr"] /= self.dataset_val.n_images
+            stats_val["Eval_thermal_mse"] /= self.dataset_val.n_images
+            stats_val["Eval_thermal_psnr"] /= self.dataset_val.n_images
             for stat_name in stats_val:
                 mlflow.log_metric(stat_name, stats_val[stat_name])
 
@@ -452,6 +524,7 @@ class ThermoxelTrainer:
             nobg=False,
             dataset_type="auto",
             train=True,
+            include_temperature=self._param.include_temperature,
         )
         dataset_test = datasets[self._param.dataset_type](
             self._param.data_dir,
@@ -477,7 +550,8 @@ class ThermoxelTrainer:
     def process_rendered_images(
         rgb_pred: torch.tensor, thermal_pred: torch.tensor
     ) -> tuple[torch.tensor, torch.tensor]:
-        rgb_pred.clamp_max_(1.0)
+        rgb_pred = rgb_pred.clamp(0.0, 1.0)
+        thermal_pred = thermal_pred.clamp(0.0, 1.0)
         thermal_pred = torch.squeeze(thermal_pred, dim=2)
 
         return rgb_pred.cpu(), thermal_pred.cpu()
@@ -496,16 +570,18 @@ class ThermoxelTrainer:
 
     @staticmethod
     def update_stats_with_mse_psnr(
-        mse_num: float, psnr: float, stats: dict[float]
+        mse_num: float, psnr: float, stats: dict[float], thermal: bool = False
     ) -> None:
 
         if math.isnan(psnr):
             raise RuntimeError("NAN PSNR")
 
+        prefix = "thermal" if thermal else "rgb"
+
         for stat_name in stats:
-            if stat_name.endswith("_mse"):
+            if stat_name.endswith(prefix + "_mse"):
                 stats[stat_name] += mse_num
-            if stat_name.endswith("_psnr"):
+            if stat_name.endswith(prefix + "_psnr"):
                 stats[stat_name] += psnr
-            if stat_name.endswith("_invsqr_mse"):
+            if stat_name.endswith(prefix + "_invsqr_mse"):
                 stats[stat_name] += 1.0 / mse_num**2
