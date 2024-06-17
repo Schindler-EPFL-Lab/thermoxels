@@ -1,15 +1,18 @@
-from plenoxels.opt.util.util import Intrin, similarity_from_cameras
-from plenoxels.opt.util.dataset_base import DatasetBase
-import torch
-from os import path
+import json
+import logging
 import os
+from os import path
+from pathlib import Path
+
 import cv2
 import imageio
 import numpy as np
-import logging
-from pathlib import Path
+import torch
 import torch.nn.functional as F
+
 from hot_cubes.datasets.thermal_util import ThermalRays
+from plenoxels.opt.util.dataset_base import DatasetBase
+from plenoxels.opt.util.util import Intrin, similarity_from_cameras
 
 
 class ThermoSceneDataset(DatasetBase):
@@ -132,6 +135,8 @@ class ThermoSceneDataset(DatasetBase):
 
         self.intrins_full = Intrin(fx, fy, cx, cy)
 
+        self.t_max, self.t_min = self.get_temperature_metadata()
+
         # Rays are not needed for testing
         if self.split == "train":
             self.gen_rays(factor=factor)
@@ -142,15 +147,47 @@ class ThermoSceneDataset(DatasetBase):
 
     def get_intrinsic_parameters(self) -> float:
 
-        intrin_path = path.join(self.root, "intrinsics.txt")
-        assert path.exists(intrin_path), "intrinsics unavailable"
-        K: np.ndarray = np.loadtxt(intrin_path)
-        fx = K[0, 0]
-        fy = K[1, 1]
-        cx = K[0, 2]
-        cy = K[1, 2]
+        intrinsic_path = ThermoSceneDataset.find_json_structure(self.root)
+
+        with open(intrinsic_path) as file:
+            data = json.load(file)
+
+        fx, fy = data["fl_x"], data["fl_y"]
+        cx, cy = data["cx"], data["cy"]
 
         return fx, fy, cx, cy
+
+    def get_temperature_metadata(self) -> float:
+
+        metadat_path = self.root / Path("temperature_bounds.json")
+
+        with open(metadat_path) as file:
+            data = json.load(file)
+
+        t_max = data["absolute_max_temperature"]
+        t_min = data["absolute_min_temperature"]
+
+        return t_max, t_min
+
+    @staticmethod
+    def find_json_structure(dataset_path: Path) -> Path:
+        """
+        This function checks the name of the json file used to define dataset's poses
+        :returns: path of the json file
+        """
+
+        matching_files = list(dataset_path.rglob("transforms*.json"))
+
+        if len(matching_files) == 0:
+            raise RuntimeError(
+                f"Neither 'transforms.json' nor 'transforms_thermal.json' \
+                    could be found in {dataset_path}."
+            )
+        if len(matching_files) > 1:
+            raise RuntimeError("Error: More than one 'transforms*.json' file found.")
+
+        logging.info(f"Found unique JSON file: {matching_files[0].name}")
+        return Path(matching_files[0])
 
     def normalize_by_camera(self, cam_scale_factor: float) -> float:
         norm_pose_files = sorted(os.listdir(self.pose_dir_name))

@@ -1,13 +1,13 @@
 import unittest
-from plenoxels.opt.util.dataset import datasets
-from hot_cubes.datasets.thermo_scene_dataset import ThermoSceneDataset
+
 import numpy as np
+
+from hot_cubes.datasets.thermo_scene_dataset import ThermoSceneDataset
+from plenoxels.opt.util.dataset import datasets
 
 
 class Test_Thermoscene_Dataset(unittest.TestCase):
-    def test_thermoscene_dataset(
-        self, data_dir: str = "tests/mock_dataset"
-    ) -> None:
+    def test_thermoscene_dataset(self, data_dir: str = "tests/mock_dataset") -> None:
 
         dset = datasets["auto"](data_dir, split="train", device="0", epoch_size=1)
         self.assertIsInstance(dset, ThermoSceneDataset), (
@@ -33,3 +33,14 @@ class Test_Thermoscene_Dataset(unittest.TestCase):
         )
 
         np.testing.assert_allclose(intrinsic_matrix, ground_truth, rtol=1e-5)
+
+    def test_temperature_metadata(self, data_dir: str = "tests/mock_dataset") -> None:
+
+        dset = datasets["ThermoScene"](
+            data_dir, split="train", device="0", epoch_size=1
+        )
+
+        self.assertEqual(dset.t_max, 15.55841227645726, "Wrong absolute max"
+                                                        "temperature")
+        self.assertEqual(dset.t_min, -15.68152641521192, "Wrong absolute min "
+                                                         "temperature")
