@@ -27,6 +27,10 @@ class Evaluator:
         self.psnr_list: list[float] = []
         self.ssim_list: list[float] = []
 
+        self.thermal_psnr_list: list[float] = []
+        self.hssim_list: list[float] = []
+        self.thermal_mae_list: list[float] = []
+
         if self._param.lpips:
             import lpips
 
@@ -93,7 +97,7 @@ class Evaluator:
         mse_map = (im_thermal.cpu() - im_gt_thermal.cpu()) ** 2
         mse_num = mse_map.mean().item()
         psnr_thermal = -10.0 * math.log10(mse_num)
-        mae = torch.abs(im_thermal.cpu() - im_gt_thermal.cpu()).mean()
+        mae = torch.abs(im_thermal.cpu() - im_gt_thermal.cpu()).mean().item()
 
         hssim = compute_hssim(
             im_thermal.cpu().unsqueeze(-1), im_gt_thermal.cpu().unsqueeze(-1)
@@ -168,6 +172,12 @@ class Evaluator:
                     self.compute_thermal_metrics(im_thermal, im_gt_thermal)
                 )
 
+                if dataset.t_max is not None and dataset.t_min is not None:
+                    mae_thermal *= dataset.t_max - dataset.t_min
+
+                self.thermal_psnr_list.append(psnr_thermal)
+                self.hssim_list.append(hssim_thermal)
+                self.thermal_mae_list.append(mae_thermal)
                 mlflow.log_metric("Thermal PSNR on test", psnr_thermal)
                 mlflow.log_metric("Thermal HSSIM on test", hssim_thermal)
                 mlflow.log_metric("Thermal MAE on test", mae_thermal)
@@ -205,24 +215,7 @@ class Evaluator:
                 if self._param.vidsave:
                     video_frames.append(concat_rgb_im)
 
-            avg_psnr, std_psnr = statistics.fmean(self.psnr_list), statistics.stdev(
-                self.psnr_list
-            )
-            mlflow.log_metric("Mean RGB PSNR on test", avg_psnr)
-            mlflow.log_metric("STD RGB PSNR on test", std_psnr)
-
-            avg_ssim, std_ssim = statistics.fmean(self.ssim_list), statistics.stdev(
-                self.ssim_list
-            )
-            mlflow.log_metric("Mean RGB SSIM on test", avg_ssim)
-            mlflow.log_metric("STD RGB SSIM on test", std_ssim)
-
-            if self._param.lpips:
-                avg_lpips, std_lpips = statistics.fmean(
-                    self.lpips_list
-                ), statistics.stdev(self.lpips_list)
-                mlflow.log_metric("Mean RGB LPIPS on test", avg_lpips)
-                mlflow.log_metric("STD RGB LPIPS on test", std_lpips)
+            self._compute_and_log_average_metrics()
 
             if not self._param.vidsave and len(video_frames):
                 vid_path = self._param.render_dir + ".mp4"
@@ -242,6 +235,47 @@ class Evaluator:
             return
         with open(self._param.metric_path + "test_metric.json", "w") as file:
             json.dump(all_metrics, file)
+
+    def _compute_and_log_average_metrics(self):
+        avg_psnr, std_psnr = statistics.fmean(self.psnr_list), statistics.stdev(
+            self.psnr_list
+        )
+        mlflow.log_metric("Mean RGB PSNR on test", avg_psnr)
+        mlflow.log_metric("STD RGB PSNR on test", std_psnr)
+
+        avg_ssim, std_ssim = statistics.fmean(self.ssim_list), statistics.stdev(
+            self.ssim_list
+        )
+        mlflow.log_metric("Mean RGB SSIM on test", avg_ssim)
+        mlflow.log_metric("STD RGB SSIM on test", std_ssim)
+
+        avg_thermal_psnr, std_thermal_psnr = statistics.fmean(
+            self.thermal_psnr_list
+        ), statistics.stdev(self.thermal_psnr_list)
+
+        mlflow.log_metric("Mean Thermal PSNR on test", avg_thermal_psnr)
+        mlflow.log_metric("STD Thermal PSNR on test", std_thermal_psnr)
+
+        avg_hssim, std_hssim = statistics.fmean(self.hssim_list), statistics.stdev(
+            self.hssim_list
+        )
+
+        mlflow.log_metric("Mean Thermal HSSIM on test", avg_hssim)
+        mlflow.log_metric("STD Thermal HSSIM on test", std_hssim)
+
+        avg_thermal_mae, std_thermal_mae = statistics.fmean(
+            self.thermal_mae_list
+        ), statistics.stdev(self.thermal_mae_list)
+
+        mlflow.log_metric("Mean Thermal MAE on test", avg_thermal_mae)
+        mlflow.log_metric("STD Thermal MAE on test", std_thermal_mae)
+
+        if self._param.lpips:
+            avg_lpips, std_lpips = statistics.fmean(self.lpips_list), statistics.stdev(
+                self.lpips_list
+            )
+            mlflow.log_metric("Mean RGB LPIPS on test", avg_lpips)
+            mlflow.log_metric("STD RGB LPIPS on test", std_lpips)
 
     @staticmethod
     def _setup_render_opts_no_args(

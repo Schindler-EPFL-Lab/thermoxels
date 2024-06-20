@@ -21,11 +21,11 @@ def get_arg() -> Param:
 
     param = tyro.cli(Param)
 
-    if param.lr_sigma_final <= param.lr_sigma:
+    if param.lr_sigma_final >= param.lr_sigma:
         raise RuntimeError("lr_sigma must be >= lr_sigma_final")
-    if param.lr_sh_final <= param.lr_sh:
+    if param.lr_sh_final >= param.lr_sh:
         raise RuntimeError("lr_sh must be >= lr_sh_final")
-    if param.lr_temperature_final <= param.lr_temperature:
+    if param.lr_temperature_final >= param.lr_temperature:
         raise RuntimeError("lr_temperature must be >= lr_temperature_final")
 
     for key, value in asdict(param).items():

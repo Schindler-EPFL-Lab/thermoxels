@@ -41,7 +41,7 @@ class Param:
     background_reso: int = 1024
 
     # Optimization settings
-    n_epoch: int = 5
+    n_epoch: int = 6
     n_iters: int = 102400
     batch_size: int = 5000
     sigma_optim: str = "rmsprop"
@@ -72,8 +72,8 @@ class Param:
     lr_color_bg_decay_steps: int = 250000
     lr_color_bg_delay_steps: int = 0
     lr_color_bg_delay_mult: float = 1e-2
-    lr_temperature: float = 1e-1
-    lr_temperature_final: float = 1e-2
+    lr_temperature: float = 1e0
+    lr_temperature_final: float = 1e-3
     lr_temperature_decay_steps: int = 250000
     lr_temperature_delay_steps: int = 0
     lr_temperature_delay_mult: float = 1e-2
@@ -93,16 +93,18 @@ class Param:
     eval_every: int = 1
     init_sigma: float = 0.1
     init_sigma_bg: float = 0.1
-    log_mse_image: bool = False
+    log_mse_image: bool = True
+    log_mae_image: bool = True
+    log_surface_temperature: bool = True
     log_depth_map: bool = True
     log_depth_map_use_thresh: float | None = None
 
     # Experiments and thresholds
     thresh_type: str = "weight"
     weight_thresh: float = 1.28
-    density_thresh: float = 5.0
+    density_thresh: float = 17.0
     background_density_thresh: float = 1.0 + 1e-9
-    max_grid_elements: int = 44000000
+    max_grid_elements: int = 44000000  # should reduce
     tune_mode: bool = False
     render_circle: bool = False
     tune_nosave: bool = False
@@ -112,7 +114,7 @@ class Param:
     tv_sparsity: float = 0.01
     tv_logalpha: bool = False
     lambda_tv_sh: float = 5e-2
-    lambda_tv_temp: float = 1e-4
+    lambda_tv_temp: float = 1e-5
     lambda_tv_lumisphere: float = 0.0
     tv_lumisphere_sparsity: float = 0.01
     tv_lumisphere_dir_factor: float = 0.0
@@ -132,8 +134,9 @@ class Param:
     n_train: int | None = None
     nosphereinit: bool = True
     tv_sh_sparsity: float = 0.01
-    tv_temp_sparsity: float = 0.01
+    tv_temp_sparsity: float = 1.0  # 0.01
     t_loss: float = 0.0
+    t_surface_loss: float = 0.0
 
     # Rendering settings
     white_bkgd: bool = False

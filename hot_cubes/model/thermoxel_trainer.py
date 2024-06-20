@@ -281,25 +281,16 @@ class ThermoxelTrainer:
             #  ThermalRays is used
             rays = svox2.Rays(batch_origins, batch_dirs)
 
-            if self._param.include_temperature:
-                rgb_pred, temp_pred = self.grid.volume_render_fused_rgbt(
-                    rays=rays,
-                    rgb_gt=rgb_gt,
-                    temp_gt=thermal_gt,
-                    t_loss=self._param.t_loss,
-                    beta_loss=self._param.lambda_beta,
-                    sparsity_loss=self._param.lambda_sparsity,
-                )
-            else:
-                rgb_pred, temp_pred = self.grid.volume_render_fused(
-                    rays=rays,
-                    rgb_gt=rgb_gt,
-                    temp_gt=thermal_gt,
-                    t_loss=self._param.t_loss,
-                    beta_loss=self._param.lambda_beta,
-                    sparsity_loss=self._param.lambda_sparsity,
-                    randomize=self._param.enable_random,
-                )
+            rgb_pred, temp_pred = self.grid.volume_render_fused_rgbt(
+                rays=rays,
+                rgb_gt=rgb_gt,
+                temp_gt=thermal_gt,
+                t_loss=self._param.t_loss,
+                beta_loss=self._param.lambda_beta,
+                sparsity_loss=self._param.lambda_sparsity,
+                density_threshold=self._param.density_thresh,
+                t_surface_loss=self._param.t_surface_loss,
+            )
 
             _, rgb_mse, rgb_psnr = ThermoxelTrainer.compute_mse_psnr(rgb_gt, rgb_pred)
             ThermoxelTrainer.update_stats_with_mse_psnr(
@@ -490,14 +481,17 @@ class ThermoxelTrainer:
                         np.array(mse_thermal),
                         f"outputs/val_mse_thermal_image" f"" f"_{img_id:04d}.png",
                     )
+                if self._param.log_mae_image:
+                    mae_map = torch.abs(thermal_pred_val.cpu() - thermal_gt_val.cpu())
+
+                    mlflow.log_image(
+                        np.array(mae_map),
+                        f"outputs/val_mae_thermal_image_{img_id:04d}.png",
+                    )
                 if self._param.log_depth_map:
                     depth_img = self.grid.volume_render_depth_image(
-                        cam,
-                        (
-                            self._param.log_depth_map_use_thresh
-                            if self._param.log_depth_map_use_thresh
-                            else None
-                        ),
+                        camera=cam,
+                        sigma_thresh=None,
                     )
                     depth_img = viridis_cmap(depth_img.cpu())
 
@@ -505,6 +499,17 @@ class ThermoxelTrainer:
                         rgb_gt_val.cpu().numpy(),
                         depth_img,
                         f"outputs/val_depth_map_{img_id:04d}.png",
+                    )
+                if self._param.log_surface_temperature:
+                    surface_temp = self.grid.volume_render_surface_temperature_image(
+                        camera=cam,
+                        sigma_thresh=self._param.density_thresh,
+                    )
+
+                    ThermoxelTrainer._log_concat_image(
+                        thermal_gt_val.cpu(),
+                        surface_temp.cpu(),
+                        f"outputs/val_surface_temp_image_{img_id:04d}.png",
                     )
 
             stats_val["Eval_rgb_mse"] /= self.dataset_val.n_images
