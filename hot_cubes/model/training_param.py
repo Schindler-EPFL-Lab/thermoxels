@@ -16,9 +16,9 @@ class Param:
     train_dir: str = "./"
 
     # General settings
-    reso: str = "[[256, 256, 256], [512, 512, 512]]"
+    reso: str = "[[128, 128, 128], [256, 256, 256], [512, 512, 512], [640, 640, 640]]"
     image_type: str = "rgb"
-    upsamp_every: int = 3 * 12800
+    upsamp_every: int = 2  # in epoch
     init_iters: int = 0
     upsample_density_add: float = 0.0
     include_temperature: bool = True
@@ -27,6 +27,7 @@ class Param:
     scale: float = 1.0
     seq_id: int = 1000
     epoch_size: int = 12800
+    scene_radius: float = 1.7
 
     # Basis function settings
     basis_type: str = "sh"
@@ -36,12 +37,12 @@ class Param:
     mlp_width: int = 32
 
     # Background settings
-    background_nlayers: int = 0
-    background_reso: int = 512
+    background_nlayers: int = 64
+    background_reso: int = 1024
 
     # Optimization settings
     n_epoch: int = 5
-    n_iters: int = 0
+    n_iters: int = 102400
     batch_size: int = 5000
     sigma_optim: str = "rmsprop"
     sh_optim: str = "rmsprop"
@@ -71,7 +72,7 @@ class Param:
     lr_color_bg_decay_steps: int = 250000
     lr_color_bg_delay_steps: int = 0
     lr_color_bg_delay_mult: float = 1e-2
-    lr_temperature: float = 1e0
+    lr_temperature: float = 1e-1
     lr_temperature_final: float = 1e-2
     lr_temperature_decay_steps: int = 250000
     lr_temperature_delay_steps: int = 0
@@ -98,7 +99,7 @@ class Param:
 
     # Experiments and thresholds
     thresh_type: str = "weight"
-    weight_thresh: float = 0.0005 * 512
+    weight_thresh: float = 1.28
     density_thresh: float = 5.0
     background_density_thresh: float = 1.0 + 1e-9
     max_grid_elements: int = 44000000
@@ -107,22 +108,22 @@ class Param:
     tune_nosave: bool = False
 
     # Losses and regularization
-    lambda_tv: float = 1e-5
+    lambda_tv: float = 0.005
     tv_sparsity: float = 0.01
     tv_logalpha: bool = False
-    lambda_tv_sh: float = 1e-3
-    lambda_tv_temp: float = 1e-6
+    lambda_tv_sh: float = 5e-2
+    lambda_tv_temp: float = 1e-4
     lambda_tv_lumisphere: float = 0.0
     tv_lumisphere_sparsity: float = 0.01
     tv_lumisphere_dir_factor: float = 0.0
     tv_decay: float = 1.0
     lambda_l2_sh: float = 0.0
-    tv_early_only: int = 1
+    tv_early_only: int = 0
     tv_contiguous: int = 1
-    lambda_sparsity: float = 0.0
-    lambda_beta: float = 0.0
-    lambda_tv_background_sigma: float = 1e-2
-    lambda_tv_background_color: float = 1e-2
+    lambda_sparsity: float = 1e-11
+    lambda_beta: float = 1e-5
+    lambda_tv_background_sigma: float = 1e-3
+    lambda_tv_background_color: float = 1e-3  # test -2
     tv_background_sparsity: float = 0.01
     lambda_tv_basis: float = 0.0
     weight_decay_sigma: float = 1.0

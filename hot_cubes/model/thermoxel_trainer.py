@@ -41,7 +41,7 @@ class ThermoxelTrainer:
         self.grid = svox2.SparseGrid(
             reso=self.resolution_list[resolution_id],
             center=dataset.scene_center,
-            radius=self.dataset.scene_radius,
+            radius=self._param.scene_radius,
             basis_dim=self._param.sh_dim,
             use_z_order=True,
             device=device,

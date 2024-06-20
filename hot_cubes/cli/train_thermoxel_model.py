@@ -1,5 +1,3 @@
-import argparse
-import json
 import sys
 from dataclasses import asdict
 from pathlib import Path
@@ -7,50 +5,32 @@ from pathlib import Path
 import mlflow
 import numpy as np
 import torch
-
-from hot_cubes.model.thermoxel_trainer import ThermoxelTrainer
-from hot_cubes.model.training_param import Param
-from plenoxels.opt.util import config_util
-from plenoxels.opt.util.dataset import datasets
+import tyro
 
 sys.path.append(".")
 sys.path.append("./hot_cubes")
 
 
+from hot_cubes.model.thermoxel_trainer import ThermoxelTrainer  # noqa: E402
+from hot_cubes.model.training_param import Param  # noqa: E402
+from plenoxels.opt.util import config_util  # noqa: E402
+from plenoxels.opt.util.dataset import datasets  # noqa: E402
+
+
 def get_arg() -> Param:
-    parser = argparse.ArgumentParser()
-    group = parser.add_argument_group("general")
-    group.add_argument("data_dir", type=str)
 
-    group.add_argument(
-        "--config",
-        "-c",
-        type=str,
-        default=None,
-        help="Config yaml file (will override args)",
-    )
-    group.add_argument(
-        "--train_dir",
-        "-t",
-        type=str,
-        default="ckpt",
-        help="checkpoint and logging directory",
-    )
+    param = tyro.cli(Param)
 
-    args = parser.parse_args()
+    if param.lr_sigma_final <= param.lr_sigma:
+        raise RuntimeError("lr_sigma must be >= lr_sigma_final")
+    if param.lr_sh_final <= param.lr_sh:
+        raise RuntimeError("lr_sh must be >= lr_sh_final")
+    if param.lr_temperature_final <= param.lr_temperature:
+        raise RuntimeError("lr_temperature must be >= lr_temperature_final")
 
-    param = Param(
-        config_file=args.config, train_dir=args.train_dir, data_dir=args.data_dir
-    )
-    with open(param.config_file, "r") as config_file:
-        configs = json.load(config_file)
-    mlflow.log_dict(configs, "config")
-
-    param.update_from_dict(configs)
-    mlflow.log_dict(asdict(param), "param")
-    assert param.lr_sigma_final <= param.lr_sigma, "lr_sigma must be >= lr_sigma_final"
-    assert param.lr_sh_final <= param.lr_sh, "lr_sh must be >= lr_sh_final"
-    assert param.lr_basis_final <= param.lr_basis, "lr_basis must be >= lr_basis_final"
+    for key, value in asdict(param).items():
+        if value is not None:
+            mlflow.log_param(key, value)
 
     Path(param.train_dir).mkdir(parents=True, exist_ok=True)
     return param
