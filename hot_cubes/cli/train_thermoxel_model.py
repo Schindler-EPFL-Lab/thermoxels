@@ -1,3 +1,4 @@
+import logging
 import sys
 from dataclasses import asdict
 from pathlib import Path
@@ -27,6 +28,8 @@ def get_arg() -> Param:
         raise RuntimeError("lr_sh must be >= lr_sh_final")
     if param.lr_temperature_final >= param.lr_temperature:
         raise RuntimeError("lr_temperature must be >= lr_temperature_final")
+    if param.freeze_rgb_after > param.n_epoch:
+        logging.warning("can only freeze after RGB training")
 
     for key, value in asdict(param).items():
         if value is not None:

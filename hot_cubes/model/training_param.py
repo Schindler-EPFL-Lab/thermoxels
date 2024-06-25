@@ -41,7 +41,8 @@ class Param:
     background_reso: int = 1024
 
     # Optimization settings
-    n_epoch: int = 6
+    n_epoch: int = 15
+    freeze_rgb_after: int = 6
     n_iters: int = 102400
     batch_size: int = 5000
     sigma_optim: str = "rmsprop"
@@ -104,7 +105,7 @@ class Param:
     weight_thresh: float = 1.28
     density_thresh: float = 17.0
     background_density_thresh: float = 1.0 + 1e-9
-    max_grid_elements: int = 44000000  # should reduce
+    max_grid_elements: int = 44000000
     tune_mode: bool = False
     render_circle: bool = False
     tune_nosave: bool = False
@@ -125,7 +126,7 @@ class Param:
     lambda_sparsity: float = 1e-11
     lambda_beta: float = 1e-5
     lambda_tv_background_sigma: float = 1e-3
-    lambda_tv_background_color: float = 1e-3  # test -2
+    lambda_tv_background_color: float = 1e-3
     tv_background_sparsity: float = 0.01
     lambda_tv_basis: float = 0.0
     weight_decay_sigma: float = 1.0
@@ -134,7 +135,7 @@ class Param:
     n_train: int | None = None
     nosphereinit: bool = True
     tv_sh_sparsity: float = 0.01
-    tv_temp_sparsity: float = 1.0  # 0.01
+    tv_temp_sparsity: float = 1.0
     t_loss: float = 0.0
     t_surface_loss: float = 0.0
 

@@ -136,28 +136,28 @@ class ThermoxelTrainer:
                 "(normal for LLFF & scenes with background)"
             )
 
-        for gstep_id_base in range(self._param.n_epoch):
+        for global_step_id_base in range(self._param.n_epoch):
             logging.info("reso_id", resolution_id)
             self.dataset.shuffle_rays()
 
             self.train_step(
-                gstep_id_base=gstep_id_base,
+                global_step_id_base=global_step_id_base,
             )
             gc.collect()
 
             # Overwrite prev checkpoints since they are very huge
             if (
                 self._param.save_every > 0
-                and (gstep_id_base + 1) % max(factor, self._param.save_every) == 0
+                and (global_step_id_base + 1) % max(factor, self._param.save_every) == 0
                 and not self._param.tune_mode
             ):
                 logging.info("Saving", self.ckpt_path)
                 self.grid.save(self.ckpt_path)
 
-            if (gstep_id_base - last_upsamp_step) < self._param.upsamp_every:
+            if (global_step_id_base - last_upsamp_step) < self._param.upsamp_every:
                 continue
 
-            last_upsamp_step = gstep_id_base
+            last_upsamp_step = global_step_id_base
 
             if resolution_id >= len(self.resolution_list) - 1:
                 continue
@@ -221,7 +221,7 @@ class ThermoxelTrainer:
 
     def train_step(
         self,
-        gstep_id_base: int,
+        global_step_id_base: int,
     ) -> None:
         epoch_size = self.dataset.rays.origins.size(0)
         batches_per_epoch = (epoch_size - 1) // self._param.batch_size + 1
@@ -248,21 +248,23 @@ class ThermoxelTrainer:
         }
 
         for iter_id, batch_begin in pbar:
-            gstep_id = iter_id + gstep_id_base * batches_per_epoch
+            global_step_id = iter_id + global_step_id_base * batches_per_epoch
             if (
                 self._param.lr_fg_begin_step > 0
-                and gstep_id == self._param.lr_fg_begin_step
+                and global_step_id == self._param.lr_fg_begin_step
             ):
                 self.grid.density_data.data[:] = self._param.init_sigma
-            lr_sigma = self._lr_sigma_func(gstep_id) * lr_sigma_factor
-            lr_sh = self._lr_sh_func(gstep_id) * lr_sh_factor
-            lr_temperature = self._lr_temperature_func(gstep_id) * lr_temperature_factor
+            lr_sigma = self._lr_sigma_func(global_step_id) * lr_sigma_factor
+            lr_sh = self._lr_sh_func(global_step_id) * lr_sh_factor
+            lr_temperature = (
+                self._lr_temperature_func(global_step_id) * lr_temperature_factor
+            )
             lr_sigma_bg = (
-                self._lr_sigma_bg_func(gstep_id - self._param.lr_basis_begin_step)
+                self._lr_sigma_bg_func(global_step_id - self._param.lr_basis_begin_step)
                 * lr_basis_factor
             )
             lr_color_bg = (
-                self._lr_color_bg_func(gstep_id - self._param.lr_basis_begin_step)
+                self._lr_color_bg_func(global_step_id - self._param.lr_basis_begin_step)
                 * lr_basis_factor
             )
 
@@ -309,7 +311,7 @@ class ThermoxelTrainer:
             if (iter_id + 1) % log_every == 0:
                 # Print averaged stats
                 pbar.set_description(
-                    f"epoch {gstep_id_base} RGB-psnr={rgb_psnr:.2f} "
+                    f"epoch {global_step_id_base} RGB-psnr={rgb_psnr:.2f} "
                     f"Thermal-psnr={thermal_psnr:.2f}"
                 )
 
@@ -323,18 +325,41 @@ class ThermoxelTrainer:
                 if self._param.weight_decay_sigma < 1.0:
                     self.grid.density_data.data *= self._param.weight_decay_sh
 
-            self.add_regularizers(
-                gstep_id, lr_sigma, lr_sh, lr_sigma_bg, lr_color_bg, lr_temperature
+            if global_step_id_base <= self._param.freeze_rgb_after:
+                self._add_rgb_regularizers(
+                    global_step_id, lr_sigma, lr_sh, lr_sigma_bg, lr_color_bg
+                )
+            self._add_thermal_regularizers(global_step_id, lr_temperature)
+
+    def _add_thermal_regularizers(
+        self,
+        global_step_id: int,
+        lr_temperature: float,
+    ) -> None:
+
+        if self._param.lambda_tv_temp > 0.0:
+            self.grid.inplace_tv_temperature_grad(
+                self.grid.temperature_data.grad,
+                scaling=self._param.lambda_tv_temp,
+                sparse_frac=self._param.tv_temp_sparsity,
+                ndc_coeffs=self.dataset.ndc_coeffs,
+                contiguous=self._param.tv_contiguous,
+            )
+        # Manual SGD/rmsprop step
+        if global_step_id >= self._param.lr_fg_begin_step:
+            self.grid.optim_temperature_step(
+                lr_temperature,
+                beta=self._param.rms_beta,
+                optim=self._param.temp_optim,
             )
 
-    def add_regularizers(
+    def _add_rgb_regularizers(
         self,
-        gstep_id: int,
+        global_step_id: int,
         lr_sigma: float,
         lr_sh: float,
         lr_sigma_bg: float,
         lr_color_bg: float,
-        lr_temperature: float,
     ) -> None:
         # Apply TV/Sparsity regularizers
         if self._param.lambda_tv > 0.0:
@@ -355,14 +380,6 @@ class ThermoxelTrainer:
                 ndc_coeffs=self.dataset.ndc_coeffs,
                 contiguous=self._param.tv_contiguous,
             )
-        if self._param.lambda_tv_temp > 0.0:
-            self.grid.inplace_tv_temperature_grad(
-                self.grid.temperature_data.grad,
-                scaling=self._param.lambda_tv_temp,
-                sparse_frac=self._param.tv_temp_sparsity,
-                ndc_coeffs=self.dataset.ndc_coeffs,
-                contiguous=self._param.tv_contiguous,
-            )
 
         if (
             self._param.lambda_tv_background_sigma > 0.0
@@ -377,15 +394,14 @@ class ThermoxelTrainer:
             )
 
         # Manual SGD/rmsprop step
-        if gstep_id >= self._param.lr_fg_begin_step:
+        if global_step_id >= self._param.lr_fg_begin_step:
             self.grid.optim_density_step(
-                lr_sigma, beta=self._param.rms_beta, optim=self._param.sigma_optim
+                lr_sigma,
+                beta=self._param.rms_beta,
+                optim=self._param.sigma_optim,
             )
             self.grid.optim_sh_step(
                 lr_sh, beta=self._param.rms_beta, optim=self._param.sh_optim
-            )
-            self.grid.optim_temperature_step(
-                lr_temperature, beta=self._param.rms_beta, optim=self._param.temp_optim
             )
 
         if self.grid.use_background:
