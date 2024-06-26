@@ -41,7 +41,7 @@ class Param:
     background_reso: int = 1024
 
     # Optimization settings
-    n_epoch: int = 4
+    n_epoch: int = 15
     freeze_rgb_after: int = 10
     n_iters: int = 102400
     batch_size: int = 5000
@@ -73,8 +73,8 @@ class Param:
     lr_color_bg_decay_steps: int = 250000
     lr_color_bg_delay_steps: int = 0
     lr_color_bg_delay_mult: float = 1e-2
-    lr_temperature: float = 1e0
-    lr_temperature_final: float = 1e-3
+    lr_temperature: float = 1e-1
+    lr_temperature_final: float = 0.5e-1
     lr_temperature_decay_steps: int = 250000
     lr_temperature_delay_steps: int = 0
     lr_temperature_delay_mult: float = 1e-2
@@ -135,9 +135,10 @@ class Param:
     n_train: int | None = None
     nosphereinit: bool = True
     tv_sh_sparsity: float = 0.01
-    tv_temp_sparsity: float = 1.0
+    tv_temp_sparsity: float = 1e-9  # 0.01
     t_loss: float = 0.0
     t_surface_loss: float = 0.0
+    l1_loss: float = 0.0
 
     # Rendering settings
     white_bkgd: bool = False

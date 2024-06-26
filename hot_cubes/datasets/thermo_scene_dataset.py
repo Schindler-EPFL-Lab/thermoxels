@@ -136,6 +136,7 @@ class ThermoSceneDataset(DatasetBase):
         self.intrins_full = Intrin(fx, fy, cx, cy)
 
         self.t_max, self.t_min = self.get_temperature_metadata()
+        self.roi_threshold = self.calculate_threshold()
 
         # Rays are not needed for testing
         if self.split == "train":
@@ -359,3 +360,33 @@ class ThermoSceneDataset(DatasetBase):
             gt=rgb_rays.gt,
             gt_thermal=gt_thermal,
         )
+
+    def calculate_threshold(self) -> float:
+        """
+        Calculates the threshold that differentiates between
+        the foreground and background of the thermal `data`.
+
+        :return: the mean threshold value of the dataset.
+        """
+        data = ThermoSceneDataset.find_json_structure(self.root)
+
+        if data.suffix == ".json":
+            with open(data, encoding="UTF-8") as file:
+                meta = json.load(file)
+            data_dir = data.parent
+        else:
+            with open(data / "transforms.json", encoding="UTF-8") as file:
+                meta = json.load(file)
+            data_dir = data
+        threshold_list = []
+        for frame in meta["frames"]:
+            filepath = Path(frame["file_path"])
+            image = cv2.imread(str(data_dir / filepath), cv2.IMREAD_GRAYSCALE)
+            threshold_temp, _ = cv2.threshold(
+                image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU
+            )
+            threshold_list.append(threshold_temp)
+
+        threshold = sum(threshold_list) / len(threshold_list)
+        threshold = threshold / 255.0
+        return threshold

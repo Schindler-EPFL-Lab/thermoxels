@@ -12,8 +12,12 @@ import torch
 from skimage.metrics import structural_similarity
 
 import hot_cubes.svox2_temperature as svox2
+from hot_cubes.datasets.thermo_scene_dataset import ThermoSceneDataset
 from hot_cubes.renderer_evaluator.render_param import RenderParam
-from hot_cubes.renderer_evaluator.thermal_evaluation_metrics import compute_hssim
+from hot_cubes.renderer_evaluator.thermal_evaluation_metrics import (
+    compute_hssim,
+    mae_thermal,
+)
 from plenoxels.opt.util.dataset_base import DatasetBase
 
 sys.path.append("../../plenoxels/opt")
@@ -21,7 +25,7 @@ sys.path.append("./hot_cubes")
 
 
 class Evaluator:
-    def __init__(self, dataset: DatasetBase, param: RenderParam) -> None:
+    def __init__(self, dataset: ThermoSceneDataset, param: RenderParam) -> None:
         self._param = param
         self._device = "cuda" if torch.cuda.is_available() else "cpu"
         self.psnr_list: list[float] = []
@@ -30,6 +34,10 @@ class Evaluator:
         self.thermal_psnr_list: list[float] = []
         self.hssim_list: list[float] = []
         self.thermal_mae_list: list[float] = []
+        self.mae_roi_threshold = dataset.roi_threshold
+        self.t_max = dataset.t_max
+        self.t_min = dataset.t_min
+        self.thermal_mae_roi_list: list[float] = []
 
         if self._param.lpips:
             import lpips
@@ -89,19 +97,41 @@ class Evaluator:
 
         return mse_num, psnr, ssim
 
-    @staticmethod
     def compute_thermal_metrics(
-        im_thermal: torch.Tensor, im_gt_thermal: torch.Tensor
-    ) -> tuple[float, float, float, float]:
+        self, im_thermal: torch.Tensor, im_gt_thermal: torch.Tensor
+    ) -> tuple[float, float, float, float, float]:
 
         mse_map = (im_thermal.cpu() - im_gt_thermal.cpu()) ** 2
         mse_num = mse_map.mean().item()
         psnr_thermal = -10.0 * math.log10(mse_num)
-        mae = torch.abs(im_thermal.cpu() - im_gt_thermal.cpu()).mean().item()
+
+        mae_map = mae_thermal(
+            im_gt_thermal.cpu(),
+            im_thermal.cpu(),
+            0,
+            False,
+            self.t_max,
+            self.t_min,
+        )
+
+        mae_roi_map = mae_thermal(
+            im_gt_thermal.cpu(),
+            im_thermal.cpu(),
+            self.mae_roi_threshold,
+            False,
+            self.t_max,
+            self.t_min,
+        )
 
         hssim = compute_hssim(im_thermal.cpu(), im_gt_thermal.cpu())
 
-        return mse_num, psnr_thermal, mae, hssim
+        return (
+            mse_num,
+            psnr_thermal,
+            mae_map.mean().item(),
+            mae_roi_map.mean().item(),
+            hssim,
+        )
 
     def compute_lpips(self, im: torch.Tensor, im_gt: torch.Tensor) -> float:
         lpips = self._lpips_vgg(
@@ -154,42 +184,13 @@ class Evaluator:
                 im.clamp(0.0, 1.0)
                 im_gt = dataset.gt[img_id].to(device=self._device)
 
-                _, psnr_rgb, ssim_rgb = Evaluator.compute_mse_psnr_ssim(im, im_gt)
-                self.psnr_list.append(psnr_rgb)
-                self.ssim_list.append(ssim_rgb)
-
-                mlflow.log_metric("RGB PSNR on test", psnr_rgb)
-                mlflow.log_metric("RGB SSIM on test", ssim_rgb)
-                logging.info(img_id, "RGB PSNR", psnr_rgb, "RGB SSIM", ssim_rgb)
-
                 im_thermal = im_thermal.clamp(0.0, 1.0)
                 im_thermal = torch.squeeze(im_thermal, dim=2)
                 im_gt_thermal = dataset.gt_thermal[img_id].cpu().mean(axis=2)
 
-                _, psnr_thermal, mae_thermal, hssim_thermal = (
-                    self.compute_thermal_metrics(im_thermal, im_gt_thermal)
+                self._compare_and_log_metrics(
+                    img_id, im, im_gt, im_thermal, im_gt_thermal
                 )
-
-                if dataset.t_max is not None and dataset.t_min is not None:
-                    mae_thermal *= dataset.t_max - dataset.t_min
-
-                self.thermal_psnr_list.append(psnr_thermal)
-                self.hssim_list.append(hssim_thermal)
-                self.thermal_mae_list.append(mae_thermal)
-                mlflow.log_metric("Thermal PSNR on test", psnr_thermal)
-                mlflow.log_metric("Thermal HSSIM on test", hssim_thermal)
-                mlflow.log_metric("Thermal MAE on test", mae_thermal)
-
-                logging.info(
-                    img_id, "Thermal PSNR", psnr_thermal, "Thermal SSIM", hssim_thermal
-                )
-
-                if self._param.lpips:
-                    lpips_i = self.compute_lpips(im, im_gt)
-                    self.lpips_list.append(lpips_i)
-
-                    mlflow.log_metric("RGB LPIPS on test", lpips_i)
-                    logging.info(img_id, "RGB LPIPS", lpips_i)
 
                 concat_rgb_im = np.concatenate(
                     [im_gt.cpu().numpy(), im.cpu().numpy()], axis=1
@@ -234,7 +235,47 @@ class Evaluator:
         with open(self._param.metric_path + "test_metric.json", "w") as file:
             json.dump(all_metrics, file)
 
-    def _compute_and_log_average_metrics(self):
+    def _compare_and_log_metrics(
+        self,
+        img_id: int,
+        im: torch.Tensor,
+        im_gt: torch.Tensor,
+        im_thermal: torch.Tensor,
+        im_gt_thermal: torch.Tensor,
+    ) -> None:
+        _, psnr_rgb, ssim_rgb = Evaluator.compute_mse_psnr_ssim(im, im_gt)
+        self.psnr_list.append(psnr_rgb)
+        self.ssim_list.append(ssim_rgb)
+
+        mlflow.log_metric("RGB PSNR on test", psnr_rgb)
+        mlflow.log_metric("RGB SSIM on test", ssim_rgb)
+        logging.info(img_id, "RGB PSNR", psnr_rgb, "RGB SSIM", ssim_rgb)
+
+        _, psnr_thermal, mae_thermal, mae_roi_thermal, hssim_thermal = (
+            self.compute_thermal_metrics(im_thermal, im_gt_thermal)
+        )
+
+        self.thermal_psnr_list.append(psnr_thermal)
+        self.hssim_list.append(hssim_thermal)
+        self.thermal_mae_list.append(mae_thermal)
+        self.thermal_mae_roi_list.append(mae_roi_thermal)
+        mlflow.log_metric("Thermal PSNR on test", psnr_thermal)
+        mlflow.log_metric("Thermal HSSIM on test", hssim_thermal)
+        mlflow.log_metric("Thermal MAE on test", mae_thermal)
+        mlflow.log_metric("Thermal MAE_roi on test", mae_roi_thermal)
+
+        logging.info(
+            img_id, "Thermal PSNR", psnr_thermal, "Thermal SSIM", hssim_thermal
+        )
+
+        if self._param.lpips:
+            lpips_i = self.compute_lpips(im, im_gt)
+            self.lpips_list.append(lpips_i)
+
+            mlflow.log_metric("RGB LPIPS on test", lpips_i)
+            logging.info(img_id, "RGB LPIPS", lpips_i)
+
+    def _compute_and_log_average_metrics(self) -> None:
         avg_psnr, std_psnr = statistics.fmean(self.psnr_list), statistics.stdev(
             self.psnr_list
         )
@@ -267,6 +308,13 @@ class Evaluator:
 
         mlflow.log_metric("Mean Thermal MAE on test", avg_thermal_mae)
         mlflow.log_metric("STD Thermal MAE on test", std_thermal_mae)
+
+        avg_thermal_mae_roi, std_thermal_mae_roi = statistics.fmean(
+            self.thermal_mae_roi_list
+        ), statistics.stdev(self.thermal_mae_roi_list)
+
+        mlflow.log_metric("Mean Thermal MAE roi on test", avg_thermal_mae_roi)
+        mlflow.log_metric("STD Thermal MAE roi on test", std_thermal_mae_roi)
 
         if self._param.lpips:
             avg_lpips, std_lpips = statistics.fmean(self.lpips_list), statistics.stdev(
