@@ -16,6 +16,7 @@ import hot_cubes.svox2_temperature as svox2
 from hot_cubes.model.training_param import Param
 from hot_cubes.renderer_evaluator.model_evaluator import Evaluator
 from hot_cubes.renderer_evaluator.render_param import RenderParam
+from hot_cubes.renderer_evaluator.thermal_evaluation_metrics import compute_hssim
 from plenoxels.opt.util import config_util
 from plenoxels.opt.util.dataset import datasets
 from plenoxels.opt.util.dataset_base import DatasetBase
@@ -295,15 +296,13 @@ class ThermoxelTrainer:
             )
 
             _, rgb_mse, rgb_psnr = ThermoxelTrainer.compute_mse_psnr(rgb_gt, rgb_pred)
-            ThermoxelTrainer.update_stats_with_mse_psnr(
-                rgb_mse, rgb_psnr, train_stats, False
-            )
+            ThermoxelTrainer._update_rgb_stats(rgb_mse, rgb_psnr, train_stats)
 
             _, thermal_mse, thermal_psnr = ThermoxelTrainer.compute_mse_psnr(
                 thermal_gt, temp_pred
             )
-            ThermoxelTrainer.update_stats_with_mse_psnr(
-                thermal_mse, thermal_psnr, train_stats, True
+            ThermoxelTrainer._update_thermal_stats(
+                thermal_mse, thermal_psnr, None, train_stats
             )
 
             # Stats
@@ -420,10 +419,11 @@ class ThermoxelTrainer:
         logging.info("Eval step")
         with torch.no_grad():
             stats_val = {
-                "Eval_rgb_psnr": 0.0,
-                "Eval_rgb_mse": 0.0,
-                "Eval_thermal_psnr": 0.0,
-                "Eval_thermal_mse": 0.0,
+                "Eval_mean_rgb_psnr": 0.0,
+                "Eval_mean_rgb_mse": 0.0,
+                "Eval_mean_thermal_psnr": 0.0,
+                "Eval_mean_thermal_mse": 0.0,
+                "Eval_mean_hssim": 0.0,
             }
             img_ids = range(0, self.dataset_val.n_images, 1)
             for i, img_id in tqdm(enumerate(img_ids), total=len(img_ids)):
@@ -462,11 +462,11 @@ class ThermoxelTrainer:
                     ThermoxelTrainer.compute_mse_psnr(thermal_gt_val, thermal_pred_val)
                 )
 
-                ThermoxelTrainer.update_stats_with_mse_psnr(
-                    mse_rgb_num, rgb_psnr, stats_val, False
-                )
-                ThermoxelTrainer.update_stats_with_mse_psnr(
-                    mse_thermal_num, thermal_psnr, stats_val, True
+                hssim = compute_hssim(thermal_pred_val.cpu(), thermal_gt_val.cpu())
+
+                ThermoxelTrainer._update_rgb_stats(mse_rgb_num, rgb_psnr, stats_val)
+                ThermoxelTrainer._update_thermal_stats(
+                    mse_thermal_num, thermal_psnr, hssim, stats_val
                 )
 
                 if not to_log:
@@ -528,10 +528,11 @@ class ThermoxelTrainer:
                         f"outputs/val_surface_temp_image_{img_id:04d}.png",
                     )
 
-            stats_val["Eval_rgb_mse"] /= self.dataset_val.n_images
-            stats_val["Eval_rgb_psnr"] /= self.dataset_val.n_images
-            stats_val["Eval_thermal_mse"] /= self.dataset_val.n_images
-            stats_val["Eval_thermal_psnr"] /= self.dataset_val.n_images
+            stats_val["Eval_mean_rgb_mse"] /= self.dataset_val.n_images
+            stats_val["Eval_mean_rgb_psnr"] /= self.dataset_val.n_images
+            stats_val["Eval_mean_thermal_mse"] /= self.dataset_val.n_images
+            stats_val["Eval_mean_thermal_psnr"] /= self.dataset_val.n_images
+            stats_val["Eval_mean_hssim"] /= self.dataset_val.n_images
             for stat_name in stats_val:
                 mlflow.log_metric(stat_name, stats_val[stat_name])
 
@@ -590,19 +591,25 @@ class ThermoxelTrainer:
         return mse_map, mse_num, psnr
 
     @staticmethod
-    def update_stats_with_mse_psnr(
-        mse_num: float, psnr: float, stats: dict[float], thermal: bool = False
-    ) -> None:
-
-        if math.isnan(psnr):
-            raise RuntimeError("NAN PSNR")
-
-        prefix = "thermal" if thermal else "rgb"
-
+    def _update_rgb_stats(rgb_mse: float, rgb_psnr: float, stats: dict[float]) -> None:
         for stat_name in stats:
-            if stat_name.endswith(prefix + "_mse"):
-                stats[stat_name] += mse_num
-            if stat_name.endswith(prefix + "_psnr"):
-                stats[stat_name] += psnr
-            if stat_name.endswith(prefix + "_invsqr_mse"):
-                stats[stat_name] += 1.0 / mse_num**2
+            if stat_name.endswith("rgb_mse"):
+                stats[stat_name] += rgb_mse
+            if stat_name.endswith("rgb_psnr"):
+                stats[stat_name] += rgb_psnr
+            if stat_name.endswith("rgb_invsqr_mse"):
+                stats[stat_name] += 1.0 / rgb_mse**2
+
+    @staticmethod
+    def _update_thermal_stats(
+        thermal_mse: float, thermal_psnr: float, hssim: float | None, stats: dict[float]
+    ) -> None:
+        for stat_name in stats:
+            if stat_name.endswith("thermal_mse"):
+                stats[stat_name] += thermal_mse
+            if stat_name.endswith("thermal_psnr"):
+                stats[stat_name] += thermal_psnr
+            if stat_name.endswith("thermal_invsqr_mse"):
+                stats[stat_name] += 1.0 / thermal_mse**2
+            if stat_name.endswith("hssim") and hssim is not None:
+                stats[stat_name] += hssim

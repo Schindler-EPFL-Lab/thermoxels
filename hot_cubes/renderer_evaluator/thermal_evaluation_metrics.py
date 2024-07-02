@@ -37,6 +37,12 @@ def compute_hssim(
     """
     device = im_gt.device
 
+    # Take into account case where image are (w,h) instead of (w, h, 1)
+    if len(im.shape) == 2:
+        im = im.unsqueeze(-1)
+    if len(im_gt.shape) == 2:
+        im_gt = im_gt.unsqueeze(-1)
+
     window = torch.ones((kernel_size, kernel_size, 1), device=device) / (
         kernel_size * kernel_size
     )

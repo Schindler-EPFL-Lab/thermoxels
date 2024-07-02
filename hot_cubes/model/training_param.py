@@ -41,8 +41,8 @@ class Param:
     background_reso: int = 1024
 
     # Optimization settings
-    n_epoch: int = 15
-    freeze_rgb_after: int = 6
+    n_epoch: int = 4
+    freeze_rgb_after: int = 10
     n_iters: int = 102400
     batch_size: int = 5000
     sigma_optim: str = "rmsprop"

@@ -99,9 +99,7 @@ class Evaluator:
         psnr_thermal = -10.0 * math.log10(mse_num)
         mae = torch.abs(im_thermal.cpu() - im_gt_thermal.cpu()).mean().item()
 
-        hssim = compute_hssim(
-            im_thermal.cpu().unsqueeze(-1), im_gt_thermal.cpu().unsqueeze(-1)
-        )
+        hssim = compute_hssim(im_thermal.cpu(), im_gt_thermal.cpu())
 
         return mse_num, psnr_thermal, mae, hssim
 
