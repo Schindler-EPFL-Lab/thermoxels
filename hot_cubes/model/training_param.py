@@ -74,7 +74,7 @@ class Param:
     lr_color_bg_delay_steps: int = 0
     lr_color_bg_delay_mult: float = 1e-2
     lr_temperature: float = 1e-1
-    lr_temperature_final: float = 0.5e-1
+    lr_temperature_final: float = 1e-5
     lr_temperature_decay_steps: int = 250000
     lr_temperature_delay_steps: int = 0
     lr_temperature_delay_mult: float = 1e-2
@@ -115,7 +115,7 @@ class Param:
     tv_sparsity: float = 0.01
     tv_logalpha: bool = False
     lambda_tv_sh: float = 5e-2
-    lambda_tv_temp: float = 1e-5
+    lambda_tv_temp: float = 1e-4
     lambda_tv_lumisphere: float = 0.0
     tv_lumisphere_sparsity: float = 0.01
     tv_lumisphere_dir_factor: float = 0.0
@@ -135,7 +135,7 @@ class Param:
     n_train: int | None = None
     nosphereinit: bool = True
     tv_sh_sparsity: float = 0.01
-    tv_temp_sparsity: float = 1e-9  # 0.01
+    tv_temp_sparsity: float = 0.01
     t_loss: float = 0.0
     t_surface_loss: float = 0.0
     l1_loss: float = 0.0

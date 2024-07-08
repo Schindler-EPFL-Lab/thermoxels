@@ -1,3 +1,5 @@
+import math
+
 import torch
 import torch.nn.functional as F
 
@@ -61,10 +63,7 @@ def compute_hssim(
     denominator = sigma1_sq + sigma2_sq + C2
     hssim_map = numerator / denominator
 
-    # Average HSSIM over sliding windows
-    hssim = hssim_map.mean().item()
-
-    return hssim
+    return hssim_map
 
 
 def mae_thermal(gt, pred, threshold, cold_flag, max_temperature, min_temperature):
@@ -81,3 +80,75 @@ def mae_thermal(gt, pred, threshold, cold_flag, max_temperature, min_temperature
     mae = torch.abs(gt - pred)
 
     return mae
+
+
+def compute_psnr(mse_num: float) -> float:
+    """
+    This funciton computes the psnr from the mean squared error assuming a scale of 1
+
+    returns: psnr as float
+    """
+    return -10.0 * math.log10(mse_num)
+
+
+def compute_thermal_metric_maps(
+    t_min: float,
+    t_max: float,
+    mae_roi_threshold: float,
+    im_thermal: torch.Tensor,
+    im_gt_thermal: torch.Tensor,
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+
+    mse_map = (im_thermal.cpu() - im_gt_thermal.cpu()) ** 2
+
+    mae_map = mae_thermal(
+        im_gt_thermal.cpu(),
+        im_thermal.cpu(),
+        0,
+        False,
+        t_max,
+        t_min,
+    )
+
+    mae_roi_map = mae_thermal(
+        im_gt_thermal.cpu(),
+        im_thermal.cpu(),
+        mae_roi_threshold,
+        False,
+        t_max,
+        t_min,
+    )
+
+    hssim_map = compute_hssim(im_thermal.cpu(), im_gt_thermal.cpu())
+
+    return (
+        mse_map,
+        mae_map,
+        mae_roi_map,
+        hssim_map,
+    )
+
+
+def compute_thermal_metrics(
+    t_min: float,
+    t_max: float,
+    mae_roi_threshold: float,
+    im_thermal: torch.Tensor,
+    im_gt_thermal: torch.Tensor,
+) -> tuple[float, float, float, float]:
+
+    mse_map, mae_map, mae_roi_map, hssim_map = compute_thermal_metric_maps(
+        t_min=t_min,
+        t_max=t_max,
+        mae_roi_threshold=mae_roi_threshold,
+        im_thermal=im_thermal,
+        im_gt_thermal=im_gt_thermal,
+    )
+
+    mse_num = mse_map.mean().item()
+    psnr_thermal = compute_psnr(mse_num)
+    mae = mae_map.mean().item()
+    mae_roi = mae_roi_map.mean().item()
+    hssim = hssim_map.mean().item()
+
+    return mse_num, psnr_thermal, mae, mae_roi, hssim

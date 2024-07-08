@@ -1,10 +1,12 @@
 import unittest
 from pathlib import Path
+
 import imageio.v2 as imageio
-import torch
-from hot_cubes.renderer_evaluator.thermal_evaluation_metrics import uniform_filter_fn
-from hot_cubes.renderer_evaluator.thermal_evaluation_metrics import compute_hssim
 import numpy as np
+import torch
+
+from hot_cubes.renderer_evaluator.thermal_evaluation_metrics import compute_hssim
+from hot_cubes.renderer_evaluator.thermal_evaluation_metrics import uniform_filter_fn
 
 
 class TestHssim(unittest.TestCase):
@@ -24,7 +26,8 @@ class TestHssim(unittest.TestCase):
             [[1, 0, 0], [0, 0, 0], [0, 0, 1]], dtype=torch.float32
         ).unsqueeze(-1)
 
-        hssim = compute_hssim(x, y, kernel_size=3, stride=1, C2=9e-4)
+        hssim_map = compute_hssim(x, y, kernel_size=3, stride=1, C2=9e-4)
+        hssim = hssim_map.mean().item()
         self.assertAlmostEqual(hssim, 0.75056, delta=0.0001)
 
     def test_hssim_equal(
@@ -33,7 +36,8 @@ class TestHssim(unittest.TestCase):
 
         original_image = imageio.imread(img_dir)
         original_image_tensor = torch.from_numpy(original_image).float().unsqueeze(-1)
-        hssim_00 = compute_hssim(original_image_tensor, original_image_tensor)
+        hssim_00_map = compute_hssim(original_image_tensor, original_image_tensor)
+        hssim_00 = hssim_00_map.mean().item()
 
         self.assertAlmostEqual(hssim_00, 1.0)
 
@@ -62,7 +66,9 @@ class TestHssim(unittest.TestCase):
         distorted_image_2_tensor = (
             torch.from_numpy(distorted_image_2).float().unsqueeze(-1)
         )
-        hssim_01 = compute_hssim(original_image_tensor, distorted_image_1_tensor)
-        hssim_02 = compute_hssim(original_image_tensor, distorted_image_2_tensor)
+        hssim_01_map = compute_hssim(original_image_tensor, distorted_image_1_tensor)
+        hssim_02_map = compute_hssim(original_image_tensor, distorted_image_2_tensor)
+        hssim_01 = hssim_01_map.mean().item()
+        hssim_02 = hssim_02_map.mean().item()
 
         self.assertGreater(hssim_01, hssim_02)

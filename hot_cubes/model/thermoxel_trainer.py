@@ -1,7 +1,6 @@
 import gc
 import json
 import logging
-import math
 import sys
 from pathlib import Path
 
@@ -16,7 +15,10 @@ import hot_cubes.svox2_temperature as svox2
 from hot_cubes.model.training_param import Param
 from hot_cubes.renderer_evaluator.model_evaluator import Evaluator
 from hot_cubes.renderer_evaluator.render_param import RenderParam
-from hot_cubes.renderer_evaluator.thermal_evaluation_metrics import compute_hssim
+from hot_cubes.renderer_evaluator.thermal_evaluation_metrics import (
+    compute_thermal_metric_maps,
+    compute_psnr,
+)
 from plenoxels.opt.util import config_util
 from plenoxels.opt.util.dataset import datasets
 from plenoxels.opt.util.dataset_base import DatasetBase
@@ -244,6 +246,7 @@ class ThermoxelTrainer:
             "Train_rgb_psnr": 0.0,
             "Train_invsqr_rgb_mse": 0.0,
             "Train_thermal_mse": 0.0,
+            "Train_thermal_mae": 0.0,
             "Train_thermal_psnr": 0.0,
             "Train_invsqr_thermal_mse": 0.0,
         }
@@ -293,6 +296,7 @@ class ThermoxelTrainer:
                 sparsity_loss=self._param.lambda_sparsity,
                 density_threshold=self._param.density_thresh,
                 t_surface_loss=self._param.t_surface_loss,
+                l1_loss=self._param.l1_loss,
             )
 
             _, rgb_mse, rgb_psnr = ThermoxelTrainer.compute_mse_psnr(rgb_gt, rgb_pred)
@@ -301,8 +305,11 @@ class ThermoxelTrainer:
             _, thermal_mse, thermal_psnr = ThermoxelTrainer.compute_mse_psnr(
                 thermal_gt, temp_pred
             )
+
+            thermal_mae = torch.abs(thermal_gt - temp_pred).mean().item()
+
             ThermoxelTrainer._update_thermal_stats(
-                thermal_mse, thermal_psnr, None, train_stats
+                thermal_mse, thermal_psnr, None, thermal_mae, None, train_stats
             )
 
             # Stats
@@ -328,6 +335,7 @@ class ThermoxelTrainer:
                 self._add_rgb_regularizers(
                     global_step_id, lr_sigma, lr_sh, lr_sigma_bg, lr_color_bg
                 )
+
             self._add_thermal_regularizers(global_step_id, lr_temperature)
 
     def _add_thermal_regularizers(
@@ -423,11 +431,12 @@ class ThermoxelTrainer:
                 "Eval_mean_rgb_mse": 0.0,
                 "Eval_mean_thermal_psnr": 0.0,
                 "Eval_mean_thermal_mse": 0.0,
+                "Eval_mean_thermal_mae": 0.0,
+                "Eval_mean_thermal_mae_roi": 0.0,
                 "Eval_mean_hssim": 0.0,
             }
             img_ids = range(0, self.dataset_val.n_images, 1)
             for i, img_id in tqdm(enumerate(img_ids), total=len(img_ids)):
-                # rgb_pred_val = rgb_gt_val = None
 
                 c2w = self.dataset_val.c2w[img_id].to(device=device)
                 cam = svox2.Camera(
@@ -458,15 +467,28 @@ class ThermoxelTrainer:
                 all_mses_rgb, mse_rgb_num, rgb_psnr = ThermoxelTrainer.compute_mse_psnr(
                     rgb_gt_val, rgb_pred_val
                 )
-                all_mses_thermal, mse_thermal_num, thermal_psnr = (
-                    ThermoxelTrainer.compute_mse_psnr(thermal_gt_val, thermal_pred_val)
+
+                thermal_mse_map, thermal_mae_map, thermal_mae_roi_map, hssim_map = (
+                    compute_thermal_metric_maps(
+                        t_min=self.dataset_val.t_min,
+                        t_max=self.dataset_val.t_max,
+                        mae_roi_threshold=self.dataset_val.roi_threshold,
+                        im_thermal=thermal_gt_val,
+                        im_gt_thermal=thermal_pred_val,
+                    )
                 )
 
-                hssim = compute_hssim(thermal_pred_val.cpu(), thermal_gt_val.cpu())
+                mse_thermal_num = thermal_mse_map.mean().item()
+                thermal_psnr = compute_psnr(mse_thermal_num)
 
                 ThermoxelTrainer._update_rgb_stats(mse_rgb_num, rgb_psnr, stats_val)
                 ThermoxelTrainer._update_thermal_stats(
-                    mse_thermal_num, thermal_psnr, hssim, stats_val
+                    mse_thermal_num,
+                    thermal_psnr,
+                    hssim_map.mean().item(),
+                    thermal_mae_map.mean().item(),
+                    thermal_mae_roi_map.mean().item(),
+                    stats_val,
                 )
 
                 if not to_log:
@@ -491,17 +513,17 @@ class ThermoxelTrainer:
                         f"outputs/val_mse_image" f"_{img_id:04d}.png",
                     )
 
-                    mse_thermal = all_mses_thermal / all_mses_thermal.max()
+                    mse_thermal = thermal_mse_map / thermal_mse_map.max()
 
                     mlflow.log_image(
                         np.array(mse_thermal),
                         f"outputs/val_mse_thermal_image" f"" f"_{img_id:04d}.png",
                     )
                 if self._param.log_mae_image:
-                    mae_map = torch.abs(thermal_pred_val.cpu() - thermal_gt_val.cpu())
+                    mae_map = thermal_mae_map / thermal_mae_map.max()
 
                     mlflow.log_image(
-                        np.array(mae_map),
+                        np.array(mae_map.unsqueeze(-1)),
                         f"outputs/val_mae_thermal_image_{img_id:04d}.png",
                     )
                 if self._param.log_depth_map:
@@ -528,12 +550,8 @@ class ThermoxelTrainer:
                         f"outputs/val_surface_temp_image_{img_id:04d}.png",
                     )
 
-            stats_val["Eval_mean_rgb_mse"] /= self.dataset_val.n_images
-            stats_val["Eval_mean_rgb_psnr"] /= self.dataset_val.n_images
-            stats_val["Eval_mean_thermal_mse"] /= self.dataset_val.n_images
-            stats_val["Eval_mean_thermal_psnr"] /= self.dataset_val.n_images
-            stats_val["Eval_mean_hssim"] /= self.dataset_val.n_images
             for stat_name in stats_val:
+                stats_val[stat_name] /= self.dataset_val.n_images
                 mlflow.log_metric(stat_name, stats_val[stat_name])
 
             logging.info("eval stats:", stats_val)
@@ -587,7 +605,7 @@ class ThermoxelTrainer:
     def compute_mse_psnr(im: torch.tensor, im_gt: torch.tensor) -> None:
         mse_map = (im.cpu() - im_gt.cpu()) ** 2
         mse_num = mse_map.mean().item()
-        psnr = -10.0 * math.log10(mse_num)
+        psnr = compute_psnr(mse_num)
         return mse_map, mse_num, psnr
 
     @staticmethod
@@ -602,7 +620,12 @@ class ThermoxelTrainer:
 
     @staticmethod
     def _update_thermal_stats(
-        thermal_mse: float, thermal_psnr: float, hssim: float | None, stats: dict[float]
+        thermal_mse: float,
+        thermal_psnr: float,
+        hssim: float | None,
+        mae: float,
+        mae_roi: float | None,
+        stats: dict[float],
     ) -> None:
         for stat_name in stats:
             if stat_name.endswith("thermal_mse"):
@@ -613,3 +636,7 @@ class ThermoxelTrainer:
                 stats[stat_name] += 1.0 / thermal_mse**2
             if stat_name.endswith("hssim") and hssim is not None:
                 stats[stat_name] += hssim
+            if stat_name.endswith("thermal_mae"):
+                stats[stat_name] += mae
+            if stat_name.endswith("thermal_mae_roi") and mae_roi is not None:
+                stats[stat_name] += mae_roi

@@ -15,8 +15,7 @@ import hot_cubes.svox2_temperature as svox2
 from hot_cubes.datasets.thermo_scene_dataset import ThermoSceneDataset
 from hot_cubes.renderer_evaluator.render_param import RenderParam
 from hot_cubes.renderer_evaluator.thermal_evaluation_metrics import (
-    compute_hssim,
-    mae_thermal,
+    compute_thermal_metrics,
 )
 from plenoxels.opt.util.dataset_base import DatasetBase
 
@@ -96,42 +95,6 @@ class Evaluator:
         )
 
         return mse_num, psnr, ssim
-
-    def compute_thermal_metrics(
-        self, im_thermal: torch.Tensor, im_gt_thermal: torch.Tensor
-    ) -> tuple[float, float, float, float, float]:
-
-        mse_map = (im_thermal.cpu() - im_gt_thermal.cpu()) ** 2
-        mse_num = mse_map.mean().item()
-        psnr_thermal = -10.0 * math.log10(mse_num)
-
-        mae_map = mae_thermal(
-            im_gt_thermal.cpu(),
-            im_thermal.cpu(),
-            0,
-            False,
-            self.t_max,
-            self.t_min,
-        )
-
-        mae_roi_map = mae_thermal(
-            im_gt_thermal.cpu(),
-            im_thermal.cpu(),
-            self.mae_roi_threshold,
-            False,
-            self.t_max,
-            self.t_min,
-        )
-
-        hssim = compute_hssim(im_thermal.cpu(), im_gt_thermal.cpu())
-
-        return (
-            mse_num,
-            psnr_thermal,
-            mae_map.mean().item(),
-            mae_roi_map.mean().item(),
-            hssim,
-        )
 
     def compute_lpips(self, im: torch.Tensor, im_gt: torch.Tensor) -> float:
         lpips = self._lpips_vgg(
@@ -252,7 +215,13 @@ class Evaluator:
         logging.info(img_id, "RGB PSNR", psnr_rgb, "RGB SSIM", ssim_rgb)
 
         _, psnr_thermal, mae_thermal, mae_roi_thermal, hssim_thermal = (
-            self.compute_thermal_metrics(im_thermal, im_gt_thermal)
+            compute_thermal_metrics(
+                self.t_min,
+                self.t_max,
+                self.mae_roi_threshold,
+                im_thermal,
+                im_gt_thermal,
+            )
         )
 
         self.thermal_psnr_list.append(psnr_thermal)
