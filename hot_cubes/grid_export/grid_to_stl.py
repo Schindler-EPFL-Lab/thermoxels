@@ -2,12 +2,12 @@ import argparse
 import logging
 from pathlib import Path
 
+import matplotlib.pyplot as plt
 import numpy as np
 import trimesh
-import matplotlib.pyplot as plt
 
 
-def convert_to_stl(
+def convert_to_mesh(
     npz_file_path: Path,
     percentile_threshold: float = 90,
     density_threshold: float | None = None,
@@ -67,7 +67,7 @@ def convert_to_stl(
         mesh.visual.face_colors = face_colors
 
     # Export the mesh to a ply file
-    output_file = str(npz_file_path).split(".")[0] + "_output_mesh.ply"
+    output_file = str(npz_file_path).split(".")[0] + "_output_mesh.obj"
     mesh.export(output_file)
 
     logging.info(f"Mesh successfully exported to {output_file}")
@@ -103,7 +103,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    convert_to_stl(
+    convert_to_mesh(
         npz_file_path=Path(args.npz_file),
         percentile_threshold=float(args.percentile_threshold),
         put_colors=args.colors,
