@@ -33,7 +33,10 @@ def get_arg() -> Param:
 
     for key, value in asdict(param).items():
         if value is not None:
-            mlflow.log_param(key, value)
+            try:  # Take in account that some values might already have been logged
+                mlflow.log_param(key, value)
+            except IndexError:
+                pass
 
     Path(param.train_dir).mkdir(parents=True, exist_ok=True)
     return param
