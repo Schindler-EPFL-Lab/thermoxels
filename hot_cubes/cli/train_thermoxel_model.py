@@ -35,7 +35,7 @@ def get_arg() -> Param:
         if value is not None:
             try:  # Take in account that some values might already have been logged
                 mlflow.log_param(key, value)
-            except IndexError:
+            except mlflow.exceptions.RestException:
                 pass
 
     Path(param.train_dir).mkdir(parents=True, exist_ok=True)
