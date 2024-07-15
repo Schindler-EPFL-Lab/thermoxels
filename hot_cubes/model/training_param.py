@@ -22,7 +22,7 @@ class Param:
     init_iters: int = 0
     upsample_density_add: float = 0.0
     include_temperature: bool = True
-    dataset_type: str = "ThermoScene"
+    dataset_type: str = "auto"
     scene_scale: float = 1.0
     scale: float = 1.0
     seq_id: int = 1000
@@ -90,12 +90,12 @@ class Param:
     # Logging and evaluations
     log_per_epoch: int = 2
     print_every: int = 20
-    save_every: int = 5
-    eval_every: int = 1
+    save_every: int = 0
+    eval_every: int = 0
     init_sigma: float = 0.1
     init_sigma_bg: float = 0.1
-    log_mse_image: bool = True
-    log_mae_image: bool = True
+    log_mse_image: bool = False
+    log_mae_image: bool = False
     log_surface_temperature: bool = True
     log_depth_map: bool = True
     log_depth_map_use_thresh: float | None = None
@@ -115,7 +115,7 @@ class Param:
     tv_sparsity: float = 0.01
     tv_logalpha: bool = False
     lambda_tv_sh: float = 5e-2
-    lambda_tv_temp: float = 1e-4
+    lambda_tv_temp: float = 1e-3
     lambda_tv_lumisphere: float = 0.0
     tv_lumisphere_sparsity: float = 0.01
     tv_lumisphere_dir_factor: float = 0.0
