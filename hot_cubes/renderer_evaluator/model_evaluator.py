@@ -5,13 +5,13 @@ import statistics
 import sys
 from pathlib import Path
 
+import hot_cubes.svox2_temperature as svox2
 import imageio
 import mlflow
 import numpy as np
 import torch
 from skimage.metrics import structural_similarity
 
-import hot_cubes.svox2_temperature as svox2
 from hot_cubes.datasets.thermo_scene_dataset import ThermoSceneDataset
 from hot_cubes.renderer_evaluator.render_param import RenderParam
 from hot_cubes.renderer_evaluator.thermal_evaluation_metrics import (
@@ -32,6 +32,7 @@ class Evaluator:
 
         self.thermal_psnr_list: list[float] = []
         self.hssim_list: list[float] = []
+        self.thermal_ssim_list: list[float] = []
         self.thermal_mae_list: list[float] = []
         self.mae_roi_threshold = dataset.roi_threshold
         self.t_max = dataset.t_max
@@ -191,6 +192,11 @@ class Evaluator:
             "RGB psnr": self.psnr_list,
             "RGB ssim": self.ssim_list,
             "RGB lpips": self.lpips_list if self._param.lpips else [],
+            "Thermal psnr": self.thermal_psnr_list,
+            "Thermal ssim": self.thermal_ssim_list,
+            "Thermal mae": self.thermal_mae_list,
+            "Thermal mae_roi": self.thermal_mae_roi_list,
+            "Thermal hssim": self.hssim_list,
         }
         mlflow.log_dict(all_metrics, "metrics")
         if log_only:
@@ -214,7 +220,7 @@ class Evaluator:
         mlflow.log_metric("RGB SSIM on test", ssim_rgb)
         logging.info(img_id, "RGB PSNR", psnr_rgb, "RGB SSIM", ssim_rgb)
 
-        _, psnr_thermal, mae_thermal, mae_roi_thermal, hssim_thermal = (
+        _, psnr_thermal, mae_thermal, mae_roi_thermal, hssim, ssim_thermal = (
             compute_thermal_metrics(
                 self.t_min,
                 self.t_max,
@@ -225,17 +231,17 @@ class Evaluator:
         )
 
         self.thermal_psnr_list.append(psnr_thermal)
-        self.hssim_list.append(hssim_thermal)
+        self.hssim_list.append(hssim)
+        self.thermal_ssim_list.append(ssim_thermal)
         self.thermal_mae_list.append(mae_thermal)
         self.thermal_mae_roi_list.append(mae_roi_thermal)
         mlflow.log_metric("Thermal PSNR on test", psnr_thermal)
-        mlflow.log_metric("Thermal HSSIM on test", hssim_thermal)
+        mlflow.log_metric("Thermal HSSIM on test", hssim)
+        mlflow.log_metric("tSSIM on test", ssim_thermal)
         mlflow.log_metric("Thermal MAE on test", mae_thermal)
         mlflow.log_metric("Thermal MAE_roi on test", mae_roi_thermal)
 
-        logging.info(
-            img_id, "Thermal PSNR", psnr_thermal, "Thermal SSIM", hssim_thermal
-        )
+        logging.info(img_id, "Thermal PSNR", psnr_thermal, "Thermal SSIM", hssim)
 
         if self._param.lpips:
             lpips_i = self.compute_lpips(im, im_gt)
@@ -270,6 +276,13 @@ class Evaluator:
 
         mlflow.log_metric("Mean Thermal HSSIM on test", avg_hssim)
         mlflow.log_metric("STD Thermal HSSIM on test", std_hssim)
+
+        avg_ssim_thermal, std_ssim_thermal = statistics.fmean(
+            self.thermal_ssim_list
+        ), statistics.stdev(self.thermal_ssim_list)
+
+        mlflow.log_metric("Mean tSSIM on test", avg_ssim_thermal)
+        mlflow.log_metric("STD tSSIM on test", std_ssim_thermal)
 
         avg_thermal_mae, std_thermal_mae = statistics.fmean(
             self.thermal_mae_list

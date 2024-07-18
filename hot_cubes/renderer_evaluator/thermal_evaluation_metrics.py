@@ -2,6 +2,7 @@ import math
 
 import torch
 import torch.nn.functional as F
+from skimage.metrics import structural_similarity
 
 
 # Define the convolution function with the uniform filter
@@ -121,12 +122,15 @@ def compute_thermal_metric_maps(
 
     hssim_map = compute_hssim(im_thermal.cpu(), im_gt_thermal.cpu())
 
-    return (
-        mse_map,
-        mae_map,
-        mae_roi_map,
-        hssim_map,
+    _, tssim_map = structural_similarity(
+        im_thermal.cpu().numpy(),
+        im_gt_thermal.cpu().numpy(),
+        channel_axis=None,
+        data_range=1,
+        full=True,
     )
+
+    return (mse_map, mae_map, mae_roi_map, hssim_map, tssim_map)
 
 
 def compute_thermal_metrics(
@@ -137,7 +141,7 @@ def compute_thermal_metrics(
     im_gt_thermal: torch.Tensor,
 ) -> tuple[float, float, float, float]:
 
-    mse_map, mae_map, mae_roi_map, hssim_map = compute_thermal_metric_maps(
+    mse_map, mae_map, mae_roi_map, hssim_map, tssim_map = compute_thermal_metric_maps(
         t_min=t_min,
         t_max=t_max,
         mae_roi_threshold=mae_roi_threshold,
@@ -150,5 +154,6 @@ def compute_thermal_metrics(
     mae = mae_map.mean().item()
     mae_roi = mae_roi_map.mean().item()
     hssim = hssim_map.mean().item()
+    tssim = tssim_map.mean().item()
 
-    return mse_num, psnr_thermal, mae, mae_roi, hssim
+    return mse_num, psnr_thermal, mae, mae_roi, hssim, tssim

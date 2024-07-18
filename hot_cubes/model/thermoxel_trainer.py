@@ -4,6 +4,7 @@ import logging
 import sys
 from pathlib import Path
 
+import hot_cubes.svox2_temperature as svox2
 import mlflow
 import numpy as np
 import torch
@@ -11,7 +12,6 @@ import torch.cuda
 import torch.optim
 from tqdm import tqdm
 
-import hot_cubes.svox2_temperature as svox2
 from hot_cubes.model.training_param import Param
 from hot_cubes.renderer_evaluator.model_evaluator import Evaluator
 from hot_cubes.renderer_evaluator.render_param import RenderParam
@@ -309,7 +309,7 @@ class ThermoxelTrainer:
             thermal_mae = torch.abs(thermal_gt - temp_pred).mean().item()
 
             ThermoxelTrainer._update_thermal_stats(
-                thermal_mse, thermal_psnr, None, thermal_mae, None, train_stats
+                thermal_mse, thermal_psnr, None, None, thermal_mae, None, train_stats
             )
 
             # Stats
@@ -434,6 +434,7 @@ class ThermoxelTrainer:
                 "Eval_mean_thermal_mae": 0.0,
                 "Eval_mean_thermal_mae_roi": 0.0,
                 "Eval_mean_hssim": 0.0,
+                "Eval_mean_tssim": 0.0,
             }
             img_ids = range(0, self.dataset_val.n_images, 1)
             for i, img_id in tqdm(enumerate(img_ids), total=len(img_ids)):
@@ -468,14 +469,18 @@ class ThermoxelTrainer:
                     rgb_gt_val, rgb_pred_val
                 )
 
-                thermal_mse_map, thermal_mae_map, thermal_mae_roi_map, hssim_map = (
-                    compute_thermal_metric_maps(
-                        t_min=self.dataset_val.t_min,
-                        t_max=self.dataset_val.t_max,
-                        mae_roi_threshold=self.dataset_val.roi_threshold,
-                        im_thermal=thermal_gt_val,
-                        im_gt_thermal=thermal_pred_val,
-                    )
+                (
+                    thermal_mse_map,
+                    thermal_mae_map,
+                    thermal_mae_roi_map,
+                    hssim_map,
+                    tssim_map,
+                ) = compute_thermal_metric_maps(
+                    t_min=self.dataset_val.t_min,
+                    t_max=self.dataset_val.t_max,
+                    mae_roi_threshold=self.dataset_val.roi_threshold,
+                    im_thermal=thermal_gt_val,
+                    im_gt_thermal=thermal_pred_val,
                 )
 
                 mse_thermal_num = thermal_mse_map.mean().item()
@@ -486,6 +491,7 @@ class ThermoxelTrainer:
                     mse_thermal_num,
                     thermal_psnr,
                     hssim_map.mean().item(),
+                    tssim_map.mean().item(),
                     thermal_mae_map.mean().item(),
                     thermal_mae_roi_map.mean().item(),
                     stats_val,
@@ -623,6 +629,7 @@ class ThermoxelTrainer:
         thermal_mse: float,
         thermal_psnr: float,
         hssim: float | None,
+        tssim: float | None,
         mae: float,
         mae_roi: float | None,
         stats: dict[float],
@@ -636,6 +643,8 @@ class ThermoxelTrainer:
                 stats[stat_name] += 1.0 / thermal_mse**2
             if stat_name.endswith("hssim") and hssim is not None:
                 stats[stat_name] += hssim
+            if stat_name.endswith("tssim") and tssim is not None:
+                stats[stat_name] += tssim
             if stat_name.endswith("thermal_mae"):
                 stats[stat_name] += mae
             if stat_name.endswith("thermal_mae_roi") and mae_roi is not None:
