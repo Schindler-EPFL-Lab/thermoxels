@@ -12,6 +12,7 @@ def convert_to_mesh(
     percentile_threshold: float = 90,
     density_threshold: float | None = None,
     put_colors: bool = False,
+    perform_filtering: bool = True,
 ) -> None:
     """
     Exports a svox2.SparseGrid saved as an npz file to a mesh stl file.
@@ -47,10 +48,15 @@ def convert_to_mesh(
     # Marching cubes algorithm from trimesh:
     mesh = trimesh.voxel.ops.matrix_to_marching_cubes(thresholded_grid)
 
+    # filtering the mesh to keep only the biggest object :
+    if perform_filtering:
+        mesh = mesh.split(only_watertight=False)
+        mesh = max(mesh, key=lambda m: m.volume)  # Get the largest component
+
     # Assign gray colors to the mesh
     mesh.visual.face_colors = [217, 217, 214]
 
-    if put_colors:
+    if put_colors and "temperature_data" in data.keys():
         # Use the temperature values to color the mesh
         temp_vector = data["temperature_data"][idxs][:, 0]
         temperature = plt.cm.plasma(temp_vector)
@@ -79,14 +85,14 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--npz_file",
+        "--npz-file",
         metavar="path",
         required=True,
         help="path of ckpt.npz",
     )
 
     parser.add_argument(
-        "--percentile_threshold",
+        "--percentile-threshold",
         metavar=float,
         default=90,
         required=False,
@@ -101,10 +107,19 @@ if __name__ == "__main__":
         help="put colors in the mesh",
     )
 
+    parser.add_argument(
+        "--filtering",
+        metavar=bool,
+        default=True,
+        required=False,
+        help="Filter the mesh",
+    )
+
     args = parser.parse_args()
 
     convert_to_mesh(
         npz_file_path=Path(args.npz_file),
         percentile_threshold=float(args.percentile_threshold),
         put_colors=args.colors,
+        perform_filtering=args.filtering,
     )
