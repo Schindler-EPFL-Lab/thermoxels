@@ -4,7 +4,6 @@ import logging
 import sys
 from pathlib import Path
 
-import hot_cubes.svox2_temperature as svox2
 import mlflow
 import numpy as np
 import torch
@@ -12,6 +11,7 @@ import torch.cuda
 import torch.optim
 from tqdm import tqdm
 
+import hot_cubes.svox2_temperature as svox2
 from hot_cubes.model.training_param import Param
 from hot_cubes.renderer_evaluator.model_evaluator import Evaluator
 from hot_cubes.renderer_evaluator.render_param import RenderParam
@@ -470,7 +470,7 @@ class ThermoxelTrainer:
                 thermal_gt_val = self.dataset_val.gt_thermal[img_id].cpu().mean(axis=2)
 
                 rgb_pred_val, thermal_pred_val = (
-                    ThermoxelTrainer.process_rendered_images(
+                    Evaluator.process_rendered_images(
                         rgb_pred_val, thermal_pred_val
                     )
                 )
@@ -510,13 +510,13 @@ class ThermoxelTrainer:
                 if not to_log:
                     continue
 
-                ThermoxelTrainer._log_concat_image(
+                Evaluator.log_concat_image(
                     rgb_gt_val.numpy(),
                     rgb_pred_val,
                     f"outputs/val_image_{img_id:04d}_" + suffix + ".png",
                 )
 
-                ThermoxelTrainer._log_concat_image(
+                Evaluator.log_concat_image(
                     thermal_gt_val.cpu(),
                     thermal_pred_val,
                     f"outputs/val_thermal_image_{img_id:04d}_" + suffix + ".png",
@@ -554,7 +554,7 @@ class ThermoxelTrainer:
                     )
                     depth_img = viridis_cmap(depth_img.cpu())
 
-                    ThermoxelTrainer._log_concat_image(
+                    Evaluator.log_concat_image(
                         rgb_gt_val.cpu().numpy(),
                         depth_img,
                         f"outputs/val_depth_map_{img_id:04d}_" + suffix + ".png",
@@ -565,7 +565,7 @@ class ThermoxelTrainer:
                         sigma_thresh=self._param.density_thresh,
                     )
 
-                    ThermoxelTrainer._log_concat_image(
+                    Evaluator.log_concat_image(
                         thermal_gt_val.cpu(),
                         surface_temp.cpu(),
                         f"outputs/val_surface_temp_image_{img_id:04d}_"
@@ -608,21 +608,6 @@ class ThermoxelTrainer:
 
         evaluator = Evaluator(param=render_param, dataset=dataset_test)
         evaluator.save_metric(log_only=True)
-
-    @staticmethod
-    def process_rendered_images(
-        rgb_pred: torch.tensor, thermal_pred: torch.tensor
-    ) -> tuple[torch.tensor, torch.tensor]:
-        rgb_pred = rgb_pred.clamp(0.0, 1.0)
-        thermal_pred = thermal_pred.clamp(0.0, 1.0)
-        thermal_pred = torch.squeeze(thermal_pred, dim=2)
-
-        return rgb_pred.cpu(), thermal_pred.cpu()
-
-    @staticmethod
-    def _log_concat_image(im_1: np.ndarray, im_2: np.ndarray, name) -> None:
-        concat_im = np.concatenate([im_1, im_2], axis=1)
-        mlflow.log_image(np.array(concat_im), name)
 
     @staticmethod
     def compute_mse_psnr(im: torch.tensor, im_gt: torch.tensor) -> None:

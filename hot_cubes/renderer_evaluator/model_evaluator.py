@@ -145,33 +145,31 @@ class Evaluator:
                     return_raylen=self._param.ray_len,
                 )
 
-                im.clamp(0.0, 1.0)
-                im_gt = dataset.gt[img_id].to(device=self._device)
+                im, im_thermal = Evaluator.process_rendered_images(im, im_thermal)
+                im_gt = dataset.gt[img_id].cpu()
 
-                im_thermal = im_thermal.clamp(0.0, 1.0)
-                im_thermal = torch.squeeze(im_thermal, dim=2)
                 im_gt_thermal = dataset.gt_thermal[img_id].cpu().mean(axis=2)
 
                 self._compare_and_log_metrics(
                     img_id, im, im_gt, im_thermal, im_gt_thermal
                 )
 
-                concat_rgb_im = np.concatenate(
-                    [im_gt.cpu().numpy(), im.cpu().numpy()], axis=1
-                )
-                concat_rgb_im = (concat_rgb_im * 255).astype(np.uint8)
-
-                concat_im_thermal = np.concatenate(
-                    [im_gt_thermal.numpy(), im_thermal.cpu().numpy()],
-                    axis=1,
-                )
-                concat_im_thermal = (concat_im_thermal * 255).astype(np.uint8)
-
-                mlflow.log_image(concat_rgb_im, f"outputs/test_image_{img_id:04d}.png")
-                mlflow.log_image(
-                    concat_im_thermal, f"outputs/test_thermal_{img_id:04d}.png"
+                Evaluator.log_concat_image(
+                    im_gt.cpu().numpy(),
+                    im.cpu().numpy(),
+                    f"outputs/test_image_{img_id:04d}.png",
                 )
 
+                Evaluator.log_concat_image(
+                    im_gt_thermal.numpy(),
+                    im_thermal.cpu().numpy(),
+                    f"outputs/test_thermal_{img_id:04d}.png",
+                )
+
+                if self._param.imsave or self._param.vidsave:
+                    concat_rgb_im = np.concatenate(
+                        [im_gt.cpu().numpy(), im.cpu().numpy()], axis=1
+                    )
                 if self._param.imsave:
                     img_path = Path(self._param.render_dir) / Path(f"{img_id:04d}.png")
                     imageio.imwrite(img_path, concat_rgb_im)
@@ -244,7 +242,7 @@ class Evaluator:
         logging.info(img_id, "Thermal PSNR", psnr_thermal, "Thermal SSIM", hssim)
 
         if self._param.lpips:
-            lpips_i = self.compute_lpips(im, im_gt)
+            lpips_i = self.compute_lpips(im.to(self._device), im_gt.to(self._device))
             self.lpips_list.append(lpips_i)
 
             mlflow.log_metric("RGB LPIPS on test", lpips_i)
@@ -332,3 +330,18 @@ class Evaluator:
         opt.last_sample_opaque = last_sample_opaque
         opt.near_clip = near_clip
         opt.use_spheric_clip = use_spheric_clip
+
+    @staticmethod
+    def process_rendered_images(
+        rgb_pred: torch.tensor, thermal_pred: torch.tensor
+    ) -> tuple[torch.tensor, torch.tensor]:
+        rgb_pred = rgb_pred.clamp(0.0, 1.0)
+        thermal_pred = thermal_pred.clamp(0.0, 1.0)
+        thermal_pred = torch.squeeze(thermal_pred, dim=2)
+
+        return rgb_pred.cpu(), thermal_pred.cpu()
+
+    @staticmethod
+    def log_concat_image(im_1: np.ndarray, im_2: np.ndarray, name: str) -> None:
+        concat_im = np.concatenate([im_1, im_2], axis=1)
+        mlflow.log_image(np.array(concat_im), name)
