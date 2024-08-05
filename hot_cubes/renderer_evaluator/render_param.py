@@ -45,3 +45,4 @@ class RenderParam:
     use_spheric_clip: bool = False
     last_sample_opaque: bool = False
     include_temperature: bool = True
+    thermal_only: bool = False

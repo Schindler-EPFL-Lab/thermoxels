@@ -297,17 +297,21 @@ class ThermoxelTrainer:
             #  ThermalRays is used
             rays = svox2.Rays(batch_origins, batch_dirs)
 
-            rgb_pred, temp_pred = self.grid.volume_render_fused_rgbt(
+            rgb_pred, temp_pred = self.grid.volume_render_fused(
                 rays=rays,
-                rgb_gt=rgb_gt,
-                temp_gt=thermal_gt,
+                rgb_gt=rgb_gt if not self._param.thermal_only else thermal_gt,
+                # This swaps outputs to train Plenoxels on thermal images
+                temp_gt=thermal_gt if not self._param.thermal_only else None,
+                # This swaps outputs to train Plenoxels on thermal images
                 t_loss=self._param.t_loss,
                 beta_loss=self._param.lambda_beta,
                 sparsity_loss=self._param.lambda_sparsity,
                 density_threshold=self._param.density_thresh,
                 t_surface_loss=self._param.t_surface_loss,
-                l1_loss=self._param.l1_loss,
             )
+
+            if self._param.thermal_only and not self._param.include_temperature:
+                temp_pred = rgb_pred  # swap outputs for Plenoxels on thermal images
 
             _, rgb_mse, rgb_psnr = ThermoxelTrainer.compute_mse_psnr(rgb_gt, rgb_pred)
             ThermoxelTrainer._update_rgb_stats(rgb_mse, rgb_psnr, train_stats)
@@ -346,7 +350,8 @@ class ThermoxelTrainer:
                     global_step_id, lr_sigma, lr_sh, lr_sigma_bg, lr_color_bg
                 )
 
-            self._add_thermal_regularizers(global_step_id, lr_temperature)
+            if self._param.include_temperature:
+                self._add_thermal_regularizers(global_step_id, lr_temperature)
 
     def _add_thermal_regularizers(
         self,
@@ -466,13 +471,14 @@ class ThermoxelTrainer:
                     use_kernel=True,
                 )
 
+                if self._param.thermal_only and not self._param.include_temperature:
+                    thermal_pred_val = rgb_pred_val.mean(axis=2).unsqueeze(-1)
+
                 rgb_gt_val = self.dataset_val.gt[img_id].cpu()
                 thermal_gt_val = self.dataset_val.gt_thermal[img_id].cpu().mean(axis=2)
 
-                rgb_pred_val, thermal_pred_val = (
-                    Evaluator.process_rendered_images(
-                        rgb_pred_val, thermal_pred_val
-                    )
+                rgb_pred_val, thermal_pred_val = Evaluator.process_rendered_images(
+                    rgb_pred_val, thermal_pred_val
                 )
 
                 all_mses_rgb, mse_rgb_num, rgb_psnr = ThermoxelTrainer.compute_mse_psnr(
@@ -588,6 +594,7 @@ class ThermoxelTrainer:
             dataset_type="auto",
             train=True,
             include_temperature=self._param.include_temperature,
+            thermal_only=self._param.thermal_only,
         )
         dataset_test = datasets[self._param.dataset_type](
             self._param.data_dir,
