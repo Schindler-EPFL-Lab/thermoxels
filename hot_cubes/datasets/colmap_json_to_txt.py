@@ -82,7 +82,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--folder_path",
+        "--folder",
         metavar="path",
         required=True,
         help="the path to the folder of images with transforms.json",
