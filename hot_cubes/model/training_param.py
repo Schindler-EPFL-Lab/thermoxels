@@ -21,8 +21,8 @@ class Param:
     upsamp_every: int = 2  # in epoch
     init_iters: int = 0
     upsample_density_add: float = 0.0
-    include_temperature: bool = False # False : Plenoxels, True : Thermoxels
-    thermal_only: bool = True # This swap RGB and Thermal to train Plenoxels on thermal
+    include_temperature: bool = False  # False : Plenoxels, True : Thermoxels
+    thermal_only: bool = True  # This swap RGB and Thermal to train Plenoxels on thermal
     dataset_type: str = "auto"
     scene_scale: float = 1.0
     scale: float = 1.0
