@@ -56,11 +56,17 @@ def main():
         device=device,
         factor=factor,
         n_images=param.n_train,
+        rgb_dropout=param.rgb_dropout,
+        thermal_dropout=param.thermal_dropout,
         **config_util.build_data_options(param),
     )
 
     dataset_val = datasets[param.dataset_type](
-        param.data_dir, split="val", **config_util.build_data_options(param)
+        param.data_dir,
+        split="val",
+        rgb_dropout=param.rgb_dropout,
+        thermal_dropout=param.thermal_dropout,
+        **config_util.build_data_options(param),
     )
 
     trainer = ThermoxelTrainer(dataset=dataset, dataset_val=dataset_val, param=param)

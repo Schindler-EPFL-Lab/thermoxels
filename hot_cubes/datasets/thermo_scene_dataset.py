@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import random
 from os import path
 from pathlib import Path
 
@@ -48,6 +49,8 @@ class ThermoSceneDataset(DatasetBase):
         cam_scale_factor: float = 0.95,
         normalize_by_camera: bool = True,
         n_images: int | None = None,
+        rgb_dropout: float = 0.0,
+        thermal_dropout: float = 0.0,
         **kwargs,  # TODO : removes when switching to new optimizer script
     ):
         super().__init__()
@@ -83,11 +86,13 @@ class ThermoSceneDataset(DatasetBase):
         all_gt, all_c2w = self.load_images(
             img_dir_name=self.rgb_img_dir_name,
             img_files=self._rgb_img_files,
+            dropout=rgb_dropout,
         )
 
         all_gt_thermal, all_c2w_thermal = self.load_images(
             img_dir_name=self.thermal_img_dir_name,
             img_files=self._thermal_img_files,
+            dropout=thermal_dropout,
         )
         self.c2w_f64 = torch.stack(all_c2w)
         self.c2w_f64_thermal = torch.stack(all_c2w_thermal)
@@ -211,6 +216,7 @@ class ThermoSceneDataset(DatasetBase):
         self,
         img_dir_name: Path,
         img_files: list[str],
+        dropout: float = 0.0,
     ) -> tuple[list[np.ndarray], list[np.ndarray]]:
         """
         This function loads thermal and rgb images and return them into lists.
@@ -229,7 +235,12 @@ class ThermoSceneDataset(DatasetBase):
                 img_fname=img_fname,
                 all_c2w=all_c2w,
             )
-            all_gt.append(torch.from_numpy(image))
+            torch_image = torch.from_numpy(image)
+
+            if random.random() < dropout:
+                all_gt.append(torch.zeros_like(torch_image))
+            else:
+                all_gt.append(torch_image)
 
         return all_gt, all_c2w
 
@@ -311,7 +322,7 @@ class ThermoSceneDataset(DatasetBase):
             orig_img_files=orig_img_files, prefix="frame_train_"
         )
 
-        img_files = [x for i, x in enumerate(total_files) if i % 10 != 0]
+        img_files = [x for i, x in enumerate(total_files) if i % 1 != 0]
         validation_img_files = [x for i, x in enumerate(total_files) if i % 10 == 0]
 
         return img_files, validation_img_files

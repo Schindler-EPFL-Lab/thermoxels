@@ -5,13 +5,13 @@ import statistics
 import sys
 from pathlib import Path
 
+import hot_cubes.svox2_temperature as svox2
 import imageio
 import mlflow
 import numpy as np
 import torch
 from skimage.metrics import structural_similarity
 
-import hot_cubes.svox2_temperature as svox2
 from hot_cubes.datasets.thermo_scene_dataset import ThermoSceneDataset
 from hot_cubes.renderer_evaluator.render_param import RenderParam
 from hot_cubes.renderer_evaluator.thermal_evaluation_metrics import (
@@ -145,35 +145,31 @@ class Evaluator:
                     return_raylen=self._param.ray_len,
                 )
 
-                if self._param.thermal_only and not self._param.include_temperature:
-                    # This swaps outputs to train Plenoxels on thermal images :
-                    im_thermal = im.mean(axis=2).unsqueeze(-1)
-
                 im, im_thermal = Evaluator.process_rendered_images(im, im_thermal)
-
                 im_gt = dataset.gt[img_id].cpu()
+
                 im_gt_thermal = dataset.gt_thermal[img_id].cpu().mean(axis=2)
 
                 self._compare_and_log_metrics(
                     img_id, im, im_gt, im_thermal, im_gt_thermal
                 )
 
-                concat_rgb_im = np.concatenate(
-                    [im_gt.cpu().numpy(), im.cpu().numpy()], axis=1
-                )
-                concat_rgb_im = (concat_rgb_im * 255).astype(np.uint8)
-
-                concat_im_thermal = np.concatenate(
-                    [im_gt_thermal.numpy(), im_thermal.cpu().numpy()],
-                    axis=1,
-                )
-                concat_im_thermal = (concat_im_thermal * 255).astype(np.uint8)
-
-                mlflow.log_image(concat_rgb_im, f"outputs/test_image_{img_id:04d}.png")
-                mlflow.log_image(
-                    concat_im_thermal, f"outputs/test_thermal_{img_id:04d}.png"
+                Evaluator.log_concat_image(
+                    im_gt.cpu().numpy(),
+                    im.cpu().numpy(),
+                    f"outputs/test_image_{img_id:04d}.png",
                 )
 
+                Evaluator.log_concat_image(
+                    im_gt_thermal.numpy(),
+                    im_thermal.cpu().numpy(),
+                    f"outputs/test_thermal_{img_id:04d}.png",
+                )
+
+                if self._param.imsave or self._param.vidsave:
+                    concat_rgb_im = np.concatenate(
+                        [im_gt.cpu().numpy(), im.cpu().numpy()], axis=1
+                    )
                 if self._param.imsave:
                     img_path = Path(self._param.render_dir) / Path(f"{img_id:04d}.png")
                     imageio.imwrite(img_path, concat_rgb_im)
