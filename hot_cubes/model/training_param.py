@@ -21,7 +21,9 @@ class Param:
     upsamp_every: int = 2  # in epoch
     init_iters: int = 0
     upsample_density_add: float = 0.0
-    include_temperature: bool = True
+    include_temperature: bool = False  # False : Plenoxels, True : Thermoxels
+    thermal_only: bool = False  # This swap RGB and Thermal to train Plenoxels on
+    # thermal, use False when using Thermoxels
     dataset_type: str = "auto"
     scene_scale: float = 1.0
     scale: float = 1.0
@@ -160,6 +162,10 @@ class Param:
     use_spheric_clip: bool = False
     enable_random: bool = False
     last_sample_opaque: bool = False
+
+    # Dropout options
+    rgb_dropout: float = 0.0
+    thermal_dropout: float = 0.0
 
     def update_from_dict(self, updates: dict) -> None:
         """

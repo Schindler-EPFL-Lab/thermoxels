@@ -16,7 +16,7 @@ class RenderParam:
     train: bool = False
     lpips: bool = True
     vidsave: bool = False
-    imsave: bool = True
+    imsave: bool = False
     fps: int = 5
     crop: float = 1.0
     nofg: bool = False

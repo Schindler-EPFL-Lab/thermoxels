@@ -5,13 +5,13 @@ import statistics
 import sys
 from pathlib import Path
 
-import hot_cubes.svox2_temperature as svox2
 import imageio
 import mlflow
 import numpy as np
 import torch
 from skimage.metrics import structural_similarity
 
+import hot_cubes.svox2_temperature as svox2
 from hot_cubes.datasets.thermo_scene_dataset import ThermoSceneDataset
 from hot_cubes.renderer_evaluator.render_param import RenderParam
 from hot_cubes.renderer_evaluator.thermal_evaluation_metrics import (
@@ -144,6 +144,10 @@ class Evaluator:
                     use_kernel=True,
                     return_raylen=self._param.ray_len,
                 )
+
+                if self._param.thermal_only and not self._param.include_temperature:
+                    # This swaps outputs to train Plenoxels on thermal images :
+                    im_thermal = im.mean(axis=2).unsqueeze(-1)
 
                 im, im_thermal = Evaluator.process_rendered_images(im, im_thermal)
                 im_gt = dataset.gt[img_id].cpu()

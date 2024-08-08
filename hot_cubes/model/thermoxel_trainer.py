@@ -42,18 +42,18 @@ class ThermoxelTrainer:
         resolution_id = 0
 
         self.grid = svox2.SparseGrid(
-            reso=self.resolution_list[resolution_id],
+            resolution=self.resolution_list[resolution_id],
             center=dataset.scene_center,
             radius=self._param.scene_radius,
             basis_dim=self._param.sh_dim,
             use_z_order=True,
             device=device,
-            basis_reso=self._param.basis_reso,
+            basis_resolution=self._param.basis_reso,
             basis_type=svox2.__dict__["BASIS_TYPE_" + self._param.basis_type.upper()],
             mlp_posenc_size=self._param.mlp_posenc_size,
             mlp_width=self._param.mlp_width,
             background_nlayers=self._param.background_nlayers,
-            background_reso=self._param.background_reso,
+            background_resolution=self._param.background_reso,
             include_temperature=self._param.include_temperature,
         )
 
@@ -148,24 +148,14 @@ class ThermoxelTrainer:
             )
             gc.collect()
 
-            if (
-                self._param.eval_every > 0
-                and (global_step_id_base + 1) % self._param.eval_every == 0
-                and not self._param.tune_mode
-            ):
-                self.eval_step(suffix=f"epoch_{global_step_id_base+1}")
-
+            # Overwrite prev checkpoints since they are very huge
             if (
                 self._param.save_every > 0
-                and (global_step_id_base + 1) % self._param.save_every == 0
+                and (global_step_id_base + 1) % max(factor, self._param.save_every) == 0
                 and not self._param.tune_mode
             ):
                 logging.info("Saving", self.ckpt_path)
-                ckpt_path = Path(self._param.train_dir) / Path(
-                    f"ckpt_epoch_{global_step_id_base+1}.npz"
-                )
-                self.grid.save(ckpt_path)
-                mlflow.log_artifact(ckpt_path)
+                self.grid.save(self.ckpt_path)
 
             if (global_step_id_base - last_upsamp_step) < self._param.upsamp_every:
                 continue
@@ -226,7 +216,7 @@ class ThermoxelTrainer:
 
         logging.info("* Final eval and save ")
 
-        self.eval_step(suffix="final")
+        self.eval_step()
         if not self._param.tune_nosave:
             self.grid.save(self.ckpt_path)
             mlflow.log_artifact(self.ckpt_path)
@@ -297,17 +287,23 @@ class ThermoxelTrainer:
             #  ThermalRays is used
             rays = svox2.Rays(batch_origins, batch_dirs)
 
-            rgb_pred, temp_pred = self.grid.volume_render_fused(
+            rgb_pred, temp_pred = self.grid.volume_render_fused_rgbt(
                 rays=rays,
                 rgb_gt=rgb_gt if not self._param.thermal_only else thermal_gt,
                 # This swaps outputs to train Plenoxels on thermal images
-                temp_gt=thermal_gt if not self._param.thermal_only else None,
+                temperature_gt=thermal_gt if not self._param.thermal_only else None,
                 # This swaps outputs to train Plenoxels on thermal images
                 t_loss=self._param.t_loss,
                 beta_loss=self._param.lambda_beta,
                 sparsity_loss=self._param.lambda_sparsity,
                 density_threshold=self._param.density_thresh,
                 t_surface_loss=self._param.t_surface_loss,
+                l1_loss=self._param.l1_loss,
+                two_steps=(
+                    True
+                    if (self._param.rgb_dropout > 0 or self._param.thermal_dropout > 0)
+                    else False
+                ),
             )
 
             if self._param.thermal_only and not self._param.include_temperature:
@@ -350,8 +346,7 @@ class ThermoxelTrainer:
                     global_step_id, lr_sigma, lr_sh, lr_sigma_bg, lr_color_bg
                 )
 
-            if self._param.include_temperature:
-                self._add_thermal_regularizers(global_step_id, lr_temperature)
+            self._add_thermal_regularizers(global_step_id, lr_temperature)
 
     def _add_thermal_regularizers(
         self,
@@ -390,7 +385,7 @@ class ThermoxelTrainer:
                 self.grid.density_data.grad.to(torch.float32),
                 scaling=self._param.lambda_tv,
                 sparse_frac=self._param.tv_sparsity,
-                logalpha=self._param.tv_logalpha,
+                log_alpha=self._param.tv_logalpha,
                 ndc_coeffs=self.dataset.ndc_coeffs,
                 contiguous=self._param.tv_contiguous,
             )
@@ -434,7 +429,7 @@ class ThermoxelTrainer:
                 optim=self._param.bg_optim,
             )
 
-    def eval_step(self, suffix: str, to_log: bool = True) -> None:
+    def eval_step(self, to_log: bool = True) -> None:
         """
         Evaluate the model on the validation set
         """
@@ -471,14 +466,17 @@ class ThermoxelTrainer:
                     use_kernel=True,
                 )
 
+                # Swap outputs for Plenoxels on thermal images only :
                 if self._param.thermal_only and not self._param.include_temperature:
                     thermal_pred_val = rgb_pred_val.mean(axis=2).unsqueeze(-1)
 
                 rgb_gt_val = self.dataset_val.gt[img_id].cpu()
                 thermal_gt_val = self.dataset_val.gt_thermal[img_id].cpu().mean(axis=2)
 
-                rgb_pred_val, thermal_pred_val = Evaluator.process_rendered_images(
-                    rgb_pred_val, thermal_pred_val
+                rgb_pred_val, thermal_pred_val = (
+                    ThermoxelTrainer.process_rendered_images(
+                        rgb_pred_val, thermal_pred_val
+                    )
                 )
 
                 all_mses_rgb, mse_rgb_num, rgb_psnr = ThermoxelTrainer.compute_mse_psnr(
@@ -516,42 +514,37 @@ class ThermoxelTrainer:
                 if not to_log:
                     continue
 
-                Evaluator.log_concat_image(
+                ThermoxelTrainer._log_concat_image(
                     rgb_gt_val.numpy(),
                     rgb_pred_val,
-                    f"outputs/val_image_{img_id:04d}_" + suffix + ".png",
+                    f"outputs/val_image_{img_id:04d}.png",
                 )
 
-                Evaluator.log_concat_image(
+                ThermoxelTrainer._log_concat_image(
                     thermal_gt_val.cpu(),
                     thermal_pred_val,
-                    f"outputs/val_thermal_image_{img_id:04d}_" + suffix + ".png",
+                    f"outputs/val_thermal_image_{img_id:04d}.png",
                 )
 
                 if self._param.log_mse_image:
                     mse_rgb_img = all_mses_rgb / all_mses_rgb.max()
                     mlflow.log_image(
                         np.array(mse_rgb_img),
-                        f"outputs/val_mse_image" f"_{img_id:04d}_" + suffix + ".png",
+                        f"outputs/val_mse_image" f"_{img_id:04d}.png",
                     )
 
                     mse_thermal = thermal_mse_map / thermal_mse_map.max()
 
                     mlflow.log_image(
                         np.array(mse_thermal),
-                        f"outputs/val_mse_thermal_image"
-                        f""
-                        f"_{img_id:04d}_" + suffix + ".png",
+                        f"outputs/val_mse_thermal_image" f"" f"_{img_id:04d}.png",
                     )
                 if self._param.log_mae_image:
-                    thermal_mae_map = torch.abs(thermal_pred_val - thermal_gt_val)
                     mae_map = thermal_mae_map / thermal_mae_map.max()
 
                     mlflow.log_image(
                         np.array(mae_map.unsqueeze(-1)),
-                        f"outputs/val_mae_thermal_image_{img_id:04d}_"
-                        + suffix
-                        + ".png",
+                        f"outputs/val_mae_thermal_image_{img_id:04d}.png",
                     )
                 if self._param.log_depth_map:
                     depth_img = self.grid.volume_render_depth_image(
@@ -560,10 +553,10 @@ class ThermoxelTrainer:
                     )
                     depth_img = viridis_cmap(depth_img.cpu())
 
-                    Evaluator.log_concat_image(
+                    ThermoxelTrainer._log_concat_image(
                         rgb_gt_val.cpu().numpy(),
                         depth_img,
-                        f"outputs/val_depth_map_{img_id:04d}_" + suffix + ".png",
+                        f"outputs/val_depth_map_{img_id:04d}.png",
                     )
                 if self._param.log_surface_temperature:
                     surface_temp = self.grid.volume_render_surface_temperature_image(
@@ -571,12 +564,10 @@ class ThermoxelTrainer:
                         sigma_thresh=self._param.density_thresh,
                     )
 
-                    Evaluator.log_concat_image(
+                    ThermoxelTrainer._log_concat_image(
                         thermal_gt_val.cpu(),
                         surface_temp.cpu(),
-                        f"outputs/val_surface_temp_image_{img_id:04d}_"
-                        + suffix
-                        + ".png",
+                        f"outputs/val_surface_temp_image_{img_id:04d}.png",
                     )
 
             for stat_name in stats_val:
@@ -594,7 +585,6 @@ class ThermoxelTrainer:
             dataset_type="auto",
             train=True,
             include_temperature=self._param.include_temperature,
-            thermal_only=self._param.thermal_only,
         )
         dataset_test = datasets[self._param.dataset_type](
             self._param.data_dir,
@@ -615,6 +605,21 @@ class ThermoxelTrainer:
 
         evaluator = Evaluator(param=render_param, dataset=dataset_test)
         evaluator.save_metric(log_only=True)
+
+    @staticmethod
+    def process_rendered_images(
+        rgb_pred: torch.tensor, thermal_pred: torch.tensor
+    ) -> tuple[torch.tensor, torch.tensor]:
+        rgb_pred = rgb_pred.clamp(0.0, 1.0)
+        thermal_pred = thermal_pred.clamp(0.0, 1.0)
+        thermal_pred = torch.squeeze(thermal_pred, dim=2)
+
+        return rgb_pred.cpu(), thermal_pred.cpu()
+
+    @staticmethod
+    def _log_concat_image(im_1: np.ndarray, im_2: np.ndarray, name) -> None:
+        concat_im = np.concatenate([im_1, im_2], axis=1)
+        mlflow.log_image(np.array(concat_im), name)
 
     @staticmethod
     def compute_mse_psnr(im: torch.tensor, im_gt: torch.tensor) -> None:
