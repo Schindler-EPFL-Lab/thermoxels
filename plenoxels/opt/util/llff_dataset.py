@@ -8,51 +8,54 @@
 # Copyright (c) 2021 VISTEC - Vidyasirimedhi Institute of Science and Technology
 # Distribute under MIT License
 
-#from torch.utils.data import Dataset
-from scipy.spatial.transform import Rotation
-import struct
-import json
-import glob
 import copy
-
-import numpy as np
+import glob
+import json
 import os
+import struct
+from collections import deque
+from typing import Optional, Union
+
+import cv2
+import imageio
+import numpy as np
 import torch
 import torch.nn.functional as F
-from collections import deque
+
+# from torch.utils.data import Dataset
+from scipy.spatial.transform import Rotation
+from svox2.utils import convert_to_ndc
 from tqdm import tqdm
-import imageio
-import cv2
-from .util import Rays, Intrin
+
 from .dataset_base import DatasetBase
 from .load_llff import load_llff_data
-from typing import Union, Optional
+from .util import Intrin, Rays
 
-from svox2.utils import convert_to_ndc
 
 class LLFFDataset(DatasetBase):
     """
     LLFF dataset loader adapted from NeX code
     Some arguments are inherited from them and not super useful in our case
     """
+
     def __init__(
         self,
-        root : str,
-        split : str,
-        epoch_size : Optional[int] = None,
+        root: str,
+        split: str,
+        epoch_size: Optional[int] = None,
         device: Union[str, torch.device] = "cpu",
         permutation: bool = True,
         factor: int = 1,
-        ref_img: str="",
-        scale : Optional[float]=1.0/4.0,  # 4x downsample
-        dmin : float=-1,
-        dmax : int=-1,
-        invz : int= 0,
+        ref_img: str = "",
+        scale: Optional[float] = 1.0 / 4.0,  # 4x downsample
+        dmin: float = -1,
+        dmax: int = -1,
+        invz: int = 0,
         transform=None,
         render_style="",
         hold_every=8,
         offset=250,
-        **kwargs
+        **kwargs,
     ):
         super().__init__()
         if scale is None:
@@ -76,12 +79,12 @@ class LLFFDataset(DatasetBase):
             hold_every=hold_every,
         )
 
-        assert len(self.sfm.cams) == 1, \
-                "Currently assuming 1 camera for simplicity, " \
-                "please feel free to extend"
+        assert len(self.sfm.cams) == 1, (
+            "Currently assuming 1 camera for simplicity, " "please feel free to extend"
+        )
 
         self.imgs = []
-        is_train_split = split.endswith('train')
+        is_train_split = split.endswith("train")
         for i, ind in enumerate(self.sfm.imgs):
             img = self.sfm.imgs[ind]
             img_train_split = ind % hold_every > 0
@@ -94,13 +97,17 @@ class LLFFDataset(DatasetBase):
         assert self.h_full == self.sfm.ref_cam["height"]
         assert self.w_full == self.sfm.ref_cam["width"]
 
-        self.intrins_full = Intrin(self.sfm.ref_cam['fx'],
-                                   self.sfm.ref_cam['fy'],
-                                   self.sfm.ref_cam['px'],
-                                   self.sfm.ref_cam['py'])
+        self.intrins_full = Intrin(
+            self.sfm.ref_cam["fx"],
+            self.sfm.ref_cam["fy"],
+            self.sfm.ref_cam["px"],
+            self.sfm.ref_cam["py"],
+        )
 
-        self.ndc_coeffs = (2 * self.intrins_full.fx / self.w_full,
-                           2 * self.intrins_full.fy / self.h_full)
+        self.ndc_coeffs = (
+            2 * self.intrins_full.fx / self.w_full,
+            2 * self.intrins_full.fy / self.h_full,
+        )
         if self.split == "train":
             self.gen_rays(factor=factor)
         else:
@@ -109,14 +116,15 @@ class LLFFDataset(DatasetBase):
             self.intrins = self.intrins_full
         self.should_use_background = False  # Give warning
 
-
     def _load_images(self):
         scale = self.scale
 
         all_gt = []
         all_c2w = []
         bottom = np.array([[0.0, 0.0, 0.0, 1.0]], dtype=np.float32)
-        global_w2rc = np.concatenate([self.sfm.ref_img['r'], self.sfm.ref_img['t']], axis=1)
+        global_w2rc = np.concatenate(
+            [self.sfm.ref_img["r"], self.sfm.ref_img["t"]], axis=1
+        )
         global_w2rc = np.concatenate([global_w2rc, bottom], axis=0).astype(np.float64)
         for idx in tqdm(range(len(self.imgs))):
             R = self.imgs[idx]["R"].astype(np.float64)
@@ -126,14 +134,14 @@ class LLFFDataset(DatasetBase):
             #  c2w = global_w2rc @ c2w
             all_c2w.append(torch.from_numpy(c2w.astype(np.float32)))
 
-            if 'path' in self.imgs[idx]:
+            if "path" in self.imgs[idx]:
                 img_path = self.imgs[idx]["path"]
                 img_path = os.path.join(self.dataset, img_path)
                 if not os.path.isfile(img_path):
                     path_noext = os.path.splitext(img_path)[0]
                     # Hack: also try png
-                    if os.path.exists(path_noext + '.png'):
-                        img_path = path_noext + '.png'
+                    if os.path.exists(path_noext + ".png"):
+                        img_path = path_noext + ".png"
                 img = imageio.imread(img_path)
                 if scale != 1 and not self.sfm.use_integral_scaling:
                     h, w = img.shape[:2]
@@ -167,12 +175,12 @@ class LLFFDataset(DatasetBase):
             if bds_scale != 1.0:
                 self.render_c2w[:, :3, 3] *= bds_scale
 
-        fx = self.sfm.ref_cam['fx']
-        fy = self.sfm.ref_cam['fy']
-        width = self.sfm.ref_cam['width']
-        height = self.sfm.ref_cam['height']
+        fx = self.sfm.ref_cam["fx"]
+        fy = self.sfm.ref_cam["fy"]
+        width = self.sfm.ref_cam["width"]
+        height = self.sfm.ref_cam["height"]
 
-        print('z_bounds from LLFF:', self.z_bounds, '(not used)')
+        print("z_bounds from LLFF:", self.z_bounds, "(not used)")
 
         # Padded bounds
         radx = 1 + 2 * self.sfm.offset / self.gt.size(2)
@@ -180,7 +188,7 @@ class LLFFDataset(DatasetBase):
         radz = 1.0
         self.scene_center = [0.0, 0.0, 0.0]
         self.scene_radius = [radx, rady, radz]
-        print('scene_radius', self.scene_radius)
+        print("scene_radius", self.scene_radius)
         self.use_sphere_bound = False
 
     def gen_rays(self, factor=1):
@@ -188,14 +196,12 @@ class LLFFDataset(DatasetBase):
         # To NDC (currently, we are normalizing these rays unlike NeRF,
         #  may not be ideal)
         origins, dirs = convert_to_ndc(
-                self.rays.origins,
-                self.rays.dirs,
-                self.ndc_coeffs)
+            self.rays.origins, self.rays.dirs, self.ndc_coeffs
+        )
         dirs /= torch.norm(dirs, dim=-1, keepdim=True)
 
         self.rays_init = Rays(origins=origins, dirs=dirs, gt=self.rays.gt)
         self.rays = self.rays_init
-
 
 
 class SfMData:
@@ -328,7 +334,7 @@ class SfMData:
             return False
 
         self.use_integral_scaling = False
-        scaled_img_dir = ''
+        scaled_img_dir = ""
         scale = self.scale
         if scale != 1 and abs((1.0 / scale) - round(1.0 / scale)) < 1e-9:
             # Integral scaling
@@ -336,34 +342,41 @@ class SfMData:
             if os.path.isdir(os.path.join(self.dataset, scaled_img_dir)):
                 self.use_integral_scaling = True
                 image_dir = os.path.join(self.dataset, scaled_img_dir)
-                print('Using pre-scaled images from', image_dir)
+                print("Using pre-scaled images from", image_dir)
             else:
                 scaled_img_dir = "images"
 
         # load R,T
-        (
-            reference_depth,
-            reference_view_id,
-            render_poses,
-            poses,
-            intrinsic
-        ) = load_llff_data(
-            dataset, factor=None, split_train_val=self.hold_every,
-            render_style=self.render_style
+        (reference_depth, reference_view_id, render_poses, poses, intrinsic) = (
+            load_llff_data(
+                dataset,
+                factor=None,
+                split_train_val=self.hold_every,
+                render_style=self.render_style,
+            )
         )
 
         # NSVF-compatible sort key
         def nsvf_sort_key(x):
-            if len(x) > 2 and x[1] == '_':
+            if len(x) > 2 and x[1] == "_":
                 return x[2:]
             else:
                 return x
+
         def keep_images(x):
-            exts = ['.png', '.jpg', '.jpeg', '.exr']
-            return [y for y in x if not y.startswith('.') and any((y.lower().endswith(ext) for ext in exts))]
+            exts = [".png", ".jpg", ".jpeg", ".exr"]
+            return [
+                y
+                for y in x
+                if not y.startswith(".")
+                and any((y.lower().endswith(ext) for ext in exts))
+            ]
 
         # get all image of this dataset
-        images_path = [os.path.join(scaled_img_dir, f) for f in sorted(keep_images(os.listdir(image_dir)), key=nsvf_sort_key)]
+        images_path = [
+            os.path.join(scaled_img_dir, f)
+            for f in sorted(keep_images(os.listdir(image_dir)), key=nsvf_sort_key)
+        ]
 
         # LLFF dataset has only single camera in dataset
         if len(intrinsic) == 3:
@@ -390,7 +403,9 @@ class SfMData:
             # restore image id back from reference_view_id
             # by adding missing validation index
             image_id = reference_view_id + 1  # index 0 alway in validation set
-            image_id = image_id + (image_id // self.hold_every)  # every 8 will be validation set
+            image_id = image_id + (
+                image_id // self.hold_every
+            )  # every 8 will be validation set
             self.ref_cam = self.cams[0]
 
             self.ref_img = self.imgs[image_id]  # here is reference view from train set

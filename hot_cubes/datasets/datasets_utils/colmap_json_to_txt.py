@@ -1,8 +1,9 @@
-import json
-import numpy as np
 import argparse
-import pathlib
+import json
 import logging
+import pathlib
+
+import numpy as np
 
 
 def find_json_structure(dataset_path: pathlib.Path) -> pathlib.Path:
@@ -89,4 +90,4 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
-    convert_colmap_json_to_txt(pathlib.Path(args.folder_path))
+    convert_colmap_json_to_txt(pathlib.Path(args.folder))

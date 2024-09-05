@@ -1,17 +1,20 @@
+import sys
 import unittest
 
 import numpy as np
 
 from hot_cubes.datasets.thermo_scene_dataset import ThermoSceneDataset
-from plenoxels.opt.util.dataset import datasets
+
+sys.path.append("./plenoxels")  # Avoid having to install plenoxel on GPU-less machines
+from plenoxels.opt.util.dataset import datasets  # noqa: E402
 
 
 class Test_Thermoscene_Dataset(unittest.TestCase):
     def test_thermoscene_dataset(self, data_dir: str = "tests/mock_dataset") -> None:
 
         dset = datasets["auto"](data_dir, split="train", device="0", epoch_size=1)
-        self.assertIsInstance(dset, ThermoSceneDataset), (
-            "dset is not of type ThermoSceneDataset"
+        self.assertIsInstance(
+            dset, ThermoSceneDataset, "dset is not of type ThermoSceneDataset"
         )
 
         fx, fy, cx, cy = dset.get_intrinsic_parameters()
@@ -40,7 +43,9 @@ class Test_Thermoscene_Dataset(unittest.TestCase):
             data_dir, split="train", device="0", epoch_size=1
         )
 
-        self.assertEqual(dset.t_max, 15.55841227645726, "Wrong absolute max"
-                                                        "temperature")
-        self.assertEqual(dset.t_min, -15.68152641521192, "Wrong absolute min "
-                                                         "temperature")
+        self.assertEqual(
+            dset.t_max, 15.55841227645726, "Wrong absolute max" "temperature"
+        )
+        self.assertEqual(
+            dset.t_min, -15.68152641521192, "Wrong absolute min " "temperature"
+        )

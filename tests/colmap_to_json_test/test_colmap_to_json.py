@@ -1,8 +1,11 @@
 import unittest
-import numpy as np
 from pathlib import Path
 
-from hot_cubes.datasets.colmap_json_to_txt import convert_colmap_json_to_txt
+import numpy as np
+
+from hot_cubes.datasets.datasets_utils.colmap_json_to_txt import (
+    convert_colmap_json_to_txt,
+)
 
 
 class TestClomapJsonTotext(unittest.TestCase):

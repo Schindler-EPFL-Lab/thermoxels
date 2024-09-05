@@ -1,9 +1,13 @@
+import sys
 import unittest
-from hot_cubes.renderer_evaluator.model_evaluator import Evaluator
-from skimage import data
+
 import imageio.v2 as imageio
-import torch
 import numpy as np
+import torch
+from skimage import data
+
+sys.path.append("./plenoxels")  # Avoid having to install plenoxel on GPU-less machines
+from hot_cubes.renderer_evaluator.model_evaluator import Evaluator  # noqa: E402
 
 
 class TestMetricsComparator(unittest.TestCase):

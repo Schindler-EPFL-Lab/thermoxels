@@ -187,7 +187,7 @@ class ThermoxelTrainer:
             )
 
             self.grid.resample(
-                reso=self.resolution_list[resolution_id],
+                resolution=self.resolution_list[resolution_id],
                 sigma_thresh=self._param.density_thresh,
                 weight_thresh=(
                     self._param.weight_thresh / z_reso if use_sparsify else 0.0

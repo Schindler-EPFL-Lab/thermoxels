@@ -1,18 +1,20 @@
 import logging
 from dataclasses import dataclass
 from functools import reduce
-from typing import Union, List, Optional, Tuple
+from typing import List, Optional, Tuple, Union
 from warnings import warn
 
 import numpy as np
+import svox2.csrc as _C
 import torch
-from torch import nn, autograd
+from torch import autograd, nn
 from tqdm import tqdm
 
-import svox2.csrc as _C
 from plenoxels.svox2 import utils
 from plenoxels.svox2.defs import *
+
 # flake8: noqa
+
 
 @dataclass
 class RenderOptions:
@@ -598,7 +600,7 @@ class SparseGrid(nn.Module):
         results_sigma[mask] = self.density_data[idxs]
         results_sh[mask] = self.sh_data[idxs]
         results_temperature[mask] = self.temperature_data[idxs].to(device=links.device)
-        return results_sigma, results_sh, results_temp
+        return results_sigma, results_sh, results_temperature
 
     def sample(
         self,
@@ -712,7 +714,7 @@ class SparseGrid(nn.Module):
             else:
                 samples_temperature = torch.empty_like(self.temperature_data[:0])
 
-            return samples_sigma, samples_rgb, samples_temp
+            return samples_sigma, samples_rgb, samples_temperature
 
     def forward(self, points: torch.Tensor, use_kernel: bool = True):
         return self.sample(points, use_kernel=use_kernel)
@@ -841,7 +843,7 @@ class SparseGrid(nn.Module):
             weight = torch.exp(log_light_intensity[good_indices]) * (
                 1.0 - torch.exp(log_att)
             )
-            temperature = temp.squeeze()
+            temperature = temperature.squeeze()
 
             # <[B', 3, n_sh_coeffs]>
             rgb_sh = rgb.reshape(-1, 3, self.basis_dim)
@@ -853,9 +855,9 @@ class SparseGrid(nn.Module):
 
             out_rgb[good_indices] = out_rgb[good_indices] + rgb
 
-            temperature = weight * temp
+            temperature = weight * temperature
 
-            out_temperature[good_indices] += temp
+            out_temperature[good_indices] += temperature
 
             log_light_intensity[good_indices] += log_att
             t += self.opt.step_size
@@ -1421,16 +1423,16 @@ class SparseGrid(nn.Module):
 
     def volume_render_depth(self, rays: Rays, sigma_thresh: Optional[float] = None):
         """
-        Volumetric depth rendering for rays
+          Volumetric depth rendering for rays
 
-        :param rays: Rays, (origins (N, 3), dirs (N, 3))
-        :param sigma_thresh: Optional[float].
-        If None then finds the standard expected termination
-      (NOTE: this is the absolute length along the ray,
-            not the z-depth as usually expected);
-      else then finds the first point where sigma strictly exceeds sigma_thresh
+          :param rays: Rays, (origins (N, 3), dirs (N, 3))
+          :param sigma_thresh: Optional[float].
+          If None then finds the standard expected termination
+        (NOTE: this is the absolute length along the ray,
+              not the z-depth as usually expected);
+        else then finds the first point where sigma strictly exceeds sigma_thresh
 
-        :return: (N,)
+          :return: (N,)
         """
         if sigma_thresh is None:
             return _C.volume_render_expected_term(
@@ -1467,16 +1469,16 @@ class SparseGrid(nn.Module):
         batch_size: int = 5000,
     ):
         """
-        Volumetric depth rendering for full image
+          Volumetric depth rendering for full image
 
-        :param camera: Camera, a single camera
-        :param sigma_thresh: Optional[float].
-        If None then finds the standard expected termination
-      (NOTE: this is the absolute length along the ray,
-      not the z-depth as usually expected);
-      else then finds the first point where sigma strictly exceeds sigma_thresh
+          :param camera: Camera, a single camera
+          :param sigma_thresh: Optional[float].
+          If None then finds the standard expected termination
+        (NOTE: this is the absolute length along the ray,
+        not the z-depth as usually expected);
+        else then finds the first point where sigma strictly exceeds sigma_thresh
 
-        :return: depth (H, W)
+          :return: depth (H, W)
         """
         rays = camera.gen_rays()
         all_depths = []
