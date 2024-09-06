@@ -12,6 +12,8 @@ keywords = []
 authors = []
 dependencies = ["tyro >= 0.8.8"]
 
+[project.optional-dependencies]
+azure = ["azure-ml-utils"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["plenoxels"]

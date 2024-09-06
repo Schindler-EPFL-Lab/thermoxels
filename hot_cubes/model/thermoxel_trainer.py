@@ -16,8 +16,8 @@ from hot_cubes.model.training_param import Param
 from hot_cubes.renderer_evaluator.model_evaluator import Evaluator
 from hot_cubes.renderer_evaluator.render_param import RenderParam
 from hot_cubes.renderer_evaluator.thermal_evaluation_metrics import (
-    compute_thermal_metric_maps,
     compute_psnr,
+    compute_thermal_metric_maps,
 )
 from plenoxels.opt.util import config_util
 from plenoxels.opt.util.dataset import datasets
