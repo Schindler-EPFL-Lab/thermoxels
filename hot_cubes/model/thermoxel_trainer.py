@@ -1,7 +1,6 @@
 import gc
 import json
 import logging
-import sys
 from pathlib import Path
 
 import mlflow
@@ -12,7 +11,7 @@ import torch.optim
 from tqdm import tqdm
 
 import hot_cubes.svox2_temperature as svox2
-from hot_cubes.model.training_param import Param
+from hot_cubes.model.training_param import TrainingParam
 from hot_cubes.renderer_evaluator.model_evaluator import Evaluator
 from hot_cubes.renderer_evaluator.render_param import RenderParam
 from hot_cubes.renderer_evaluator.thermal_evaluation_metrics import (
@@ -24,15 +23,12 @@ from plenoxels.opt.util.dataset import datasets
 from plenoxels.opt.util.dataset_base import DatasetBase
 from plenoxels.opt.util.util import get_expon_lr_func, viridis_cmap
 
-sys.path.append(".")
-sys.path.append("./hot_cubes")
 device = "cuda" if torch.cuda.is_available() else "cpu"
-# logging.basicConfig(level=logging.INFO)
 
 
 class ThermoxelTrainer:
     def __init__(
-        self, dataset: DatasetBase, dataset_val: DatasetBase, param: Param
+        self, dataset: DatasetBase, dataset_val: DatasetBase, param: TrainingParam
     ) -> None:
         self._param = param
         self.dataset = dataset
@@ -54,7 +50,7 @@ class ThermoxelTrainer:
             mlp_width=self._param.mlp_width,
             background_nlayers=self._param.background_nlayers,
             background_resolution=self._param.background_reso,
-            include_temperature=self._param.include_temperature,
+            is_thermoxels=self._param.is_thermoxels,
         )
 
         self._lr_sigma_func = get_expon_lr_func(
@@ -134,7 +130,7 @@ class ThermoxelTrainer:
         last_upsamp_step = self._param.init_iters
 
         if self._param.enable_random:
-            logging.warn(
+            logging.warning(
                 "Randomness is enabled for training "
                 "(normal for LLFF & scenes with background)"
             )
@@ -289,9 +285,9 @@ class ThermoxelTrainer:
 
             rgb_pred, temp_pred = self.grid.volume_render_fused_rgbt(
                 rays=rays,
-                rgb_gt=rgb_gt if not self._param.thermal_only else thermal_gt,
+                rgb_gt=rgb_gt if not self._param.is_thermoxels else thermal_gt,
                 # This swaps outputs to train Plenoxels on thermal images
-                temperature_gt=thermal_gt if not self._param.thermal_only else None,
+                temperature_gt=thermal_gt if not self._param.is_thermoxels else None,
                 # This swaps outputs to train Plenoxels on thermal images
                 t_loss=self._param.t_loss,
                 beta_loss=self._param.lambda_beta,
@@ -306,7 +302,7 @@ class ThermoxelTrainer:
                 ),
             )
 
-            if self._param.thermal_only and not self._param.include_temperature:
+            if not self._param.is_thermoxels:
                 temp_pred = rgb_pred  # swap outputs for Plenoxels on thermal images
 
             _, rgb_mse, rgb_psnr = ThermoxelTrainer.compute_mse_psnr(rgb_gt, rgb_pred)
@@ -467,7 +463,7 @@ class ThermoxelTrainer:
                 )
 
                 # Swap outputs for Plenoxels on thermal images only :
-                if self._param.thermal_only and not self._param.include_temperature:
+                if not self._param.is_thermoxels:
                     thermal_pred_val = rgb_pred_val.mean(axis=2).unsqueeze(-1)
 
                 rgb_gt_val = self.dataset_val.gt[img_id].cpu()
@@ -584,7 +580,7 @@ class ThermoxelTrainer:
             nobg=False,
             dataset_type="auto",
             train=True,
-            include_temperature=self._param.include_temperature,
+            is_thermoxels=self._param.is_thermoxels,
         )
         dataset_test = datasets[self._param.dataset_type](
             self._param.data_dir,

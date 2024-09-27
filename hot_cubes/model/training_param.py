@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 
 @dataclass
-class Param:
+class TrainingParam:
     """
     This class contains all the parameters to run a plenoxel optimization.
     All the parameters are set to defaukt values but can be overwritten by a config
@@ -21,9 +21,11 @@ class Param:
     upsamp_every: int = 2  # in epoch
     init_iters: int = 0
     upsample_density_add: float = 0.0
-    include_temperature: bool = False  # False : Plenoxels, True : Thermoxels
-    thermal_only: bool = False  # This swap RGB and Thermal to train Plenoxels on
-    # thermal, use False when using Thermoxels
+
+    is_thermoxels: bool = True
+    """If true ThermoxelTrainer will train thermoxels, if false, trains plenoxel with
+    thermal images only"""
+
     dataset_type: str = "auto"
     scene_scale: float = 1.0
     scale: float = 1.0

@@ -44,5 +44,6 @@ class RenderParam:
     near_clip: float = 0.0
     use_spheric_clip: bool = False
     last_sample_opaque: bool = False
-    include_temperature: bool = True
-    thermal_only: bool = False
+    is_thermoxels: bool = True
+    """If true Evaluator will evaluate thermoxels, if false, evaluate plenoxel with
+    thermal images only"""

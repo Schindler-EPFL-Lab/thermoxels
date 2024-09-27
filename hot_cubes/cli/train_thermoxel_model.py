@@ -13,14 +13,14 @@ sys.path.append("./hot_cubes")
 
 
 from hot_cubes.model.thermoxel_trainer import ThermoxelTrainer  # noqa: E402
-from hot_cubes.model.training_param import Param  # noqa: E402
+from hot_cubes.model.training_param import TrainingParam  # noqa: E402
 from plenoxels.opt.util import config_util  # noqa: E402
 from plenoxels.opt.util.dataset import datasets  # noqa: E402
 
 
-def get_arg() -> Param:
+def get_arg() -> TrainingParam:
 
-    param = tyro.cli(Param)
+    param = tyro.cli(TrainingParam)
 
     if param.lr_sigma_final >= param.lr_sigma:
         raise RuntimeError("lr_sigma must be >= lr_sigma_final")

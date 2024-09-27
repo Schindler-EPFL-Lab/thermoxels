@@ -228,7 +228,7 @@ class _SampleGridAutogradFunction(autograd.Function):
 
 class _VolumeRenderFunction(autograd.Function):
     @staticmethod
-    def forward(ctx, grid, rays, opt, backend: str, include_temperature: bool = False):
+    def forward(ctx, grid, rays, opt, backend: str, is_thermoxels: bool = False):
         origins = rays.origins
         dirs = rays.dirs / torch.norm(rays.dirs, dim=-1, keepdim=True)
         color = torch.empty(
@@ -247,7 +247,7 @@ class _VolumeRenderFunction(autograd.Function):
         ctx.opt = opt
         ctx.backend = backend
 
-        if include_temperature:
+        if is_thermoxels:
             return color, temperature
         return color, None
 
@@ -404,7 +404,7 @@ class SparseGrid(nn.Module):
         background_nlayers: int = 0,  # BG MSI layers
         background_resolution: int = 256,  # BG MSI cubemap face size
         device: Union[torch.device, str] = "cpu",
-        include_temperature: bool = False,
+        is_thermoxels: bool = False,
     ):
         super().__init__()
         self.basis_type = basis_type
@@ -416,7 +416,7 @@ class SparseGrid(nn.Module):
             basis_dim >= 1 and basis_dim <= utils.MAX_SH_BASIS
         ), f"basis_dim 1-{utils.MAX_SH_BASIS} supported"
         self.basis_dim = basis_dim
-        self.include_temperature = include_temperature
+        self.is_thermoxels = is_thermoxels
 
         self.mlp_posenc_size = mlp_posenc_size
         self.mlp_width = mlp_width
@@ -971,7 +971,7 @@ class SparseGrid(nn.Module):
                 * self.opt.background_brightness
             )
 
-        if self.include_temperature:
+        if self.is_thermoxels:
             return out_rgb, out_temperature
         return out_rgb
 
@@ -1133,7 +1133,7 @@ class SparseGrid(nn.Module):
                 -1
             ) * self.opt.background_brightness
 
-        if self.include_temperature:
+        if self.is_thermoxels:
             return out_rgb, out_temperature
         return out_rgb, None
 
@@ -1152,7 +1152,7 @@ class SparseGrid(nn.Module):
         :param randomize: bool, whether to enable randomness
         :param return_raylen: bool, if true then only returns the length of the
                                     ray-cube intersection and quits
-        :param include_temperature: bool,
+        :param is_thermoxels: bool,
         if true, it returns temperature image + rgb image
         :return: (N, 3), predicted RGB
         """
@@ -1161,7 +1161,7 @@ class SparseGrid(nn.Module):
             and self.links.is_cuda
             and _C is not None
             and not return_raylen
-            # and not self.include_temperature
+            # and not self.is_thermoxels
         ):
             assert rays.is_cuda
             basis_data = (
@@ -1174,7 +1174,7 @@ class SparseGrid(nn.Module):
                 rays._to_cpp(),
                 self.opt._to_cpp(randomize=randomize),
                 self.opt.backend,
-                self.include_temperature,
+                self.is_thermoxels,
             )
         else:
             warn("Using slow volume rendering, should only be used for debugging")
@@ -1270,7 +1270,7 @@ class SparseGrid(nn.Module):
             )
             grad_holder.mask_background_out = self.sparse_background_indexer
 
-        if self.include_temperature:
+        if self.is_thermoxels:
             grad_holder.grad_temperature_out = grad_temperature
 
             custom_gradient = torch.zeros_like(temperature_gt).to(
@@ -1385,7 +1385,7 @@ class SparseGrid(nn.Module):
         if (
             not torch.is_grad_enabled()
             and not return_raylen
-            and not self.include_temperature
+            and not self.is_thermoxels
         ):
             # Use the fast image render kernel if available
             cu_fn = _C.__dict__["volume_render_cuvol_image"]
@@ -1396,7 +1396,7 @@ class SparseGrid(nn.Module):
             # Manually generate rays for now
             rays = camera.gen_rays()
             all_rgb_out = []
-            all_temperature_out = [] if self.include_temperature else None
+            all_temperature_out = [] if self.is_thermoxels else None
 
             for batch_start in range(0, camera.height * camera.width, batch_size):
                 rgb_out_part, temperature_out_part = self.volume_render(
@@ -1405,14 +1405,14 @@ class SparseGrid(nn.Module):
                     randomize=randomize,
                     return_raylen=return_raylen,
                 )
-                if self.include_temperature:
+                if self.is_thermoxels:
                     all_temperature_out.append(temperature_out_part)
                 all_rgb_out.append(rgb_out_part)
 
             all_rgb_out = torch.cat(all_rgb_out, dim=0)
             rgb_image = all_rgb_out.view(camera.height, camera.width, -1)
 
-            if self.include_temperature:
+            if self.is_thermoxels:
                 all_temperature_out = torch.cat(all_temperature_out, dim=0)
                 temperature_image = all_temperature_out.view(
                     camera.height, camera.width, -1
@@ -1716,11 +1716,11 @@ class SparseGrid(nn.Module):
                     points[i : i + batch_size],
                     grid_coords=True,
                     want_colors=True,
-                    want_temperature=self.include_temperature,
+                    want_temperature=self.is_thermoxels,
                 )
 
                 all_sample_vals_sh.append(sample_vals_sh)
-                if self.include_temperature:
+                if self.is_thermoxels:
                     all_sample_vals_temperature.append(sample_vals_temperature)
 
             sample_vals_sh = (
@@ -1729,7 +1729,7 @@ class SparseGrid(nn.Module):
                 else torch.empty_like(self.sh_data[:0])
             )
 
-            if self.include_temperature:
+            if self.is_thermoxels:
                 sample_vals_temperature = (
                     torch.cat(all_sample_vals_temperature, dim=0)
                     if len(all_sample_vals_temperature)
@@ -1764,7 +1764,7 @@ class SparseGrid(nn.Module):
                 sample_vals_density.view(-1, 1).to(device=device)
             )
             self.sh_data = nn.Parameter(sample_vals_sh.to(device=device))
-            if self.include_temperature:
+            if self.is_thermoxels:
                 self.temperature_data = nn.Parameter(
                     sample_vals_temperature.view(-1, 1).to(device=device)
                 )
@@ -1872,7 +1872,7 @@ class SparseGrid(nn.Module):
         cls,
         path: str,
         device: Union[torch.device, str] = "cpu",
-        include_temperature: bool = False,
+        is_thermoxels: bool = False,
     ):
         """
         Load from path
@@ -1911,7 +1911,7 @@ class SparseGrid(nn.Module):
             ),
             mlp_width=z["mlp_width"].item() if "mlp_width" in z else 16,
             background_nlayers=0,
-            include_temperature=include_temperature,
+            is_thermoxels=is_thermoxels,
         )
         if sh_data.dtype != np.float32:
             sh_data = sh_data.astype(np.float32)

@@ -2,7 +2,6 @@ import json
 import logging
 import math
 import statistics
-import sys
 from pathlib import Path
 
 import imageio
@@ -18,9 +17,6 @@ from hot_cubes.renderer_evaluator.thermal_evaluation_metrics import (
     compute_thermal_metrics,
 )
 from plenoxels.opt.util.dataset_base import DatasetBase
-
-sys.path.append("../../plenoxels/opt")
-sys.path.append("./hot_cubes")
 
 
 class Evaluator:
@@ -50,7 +46,7 @@ class Evaluator:
         self._grid = svox2.SparseGrid.load(
             self._param.ckpt,
             device=self._device,
-            include_temperature=self._param.include_temperature,
+            is_thermoxels=self._param.is_thermoxels,
         )
 
         if self._grid.use_background:
@@ -145,7 +141,7 @@ class Evaluator:
                     return_raylen=self._param.ray_len,
                 )
 
-                if self._param.thermal_only and not self._param.include_temperature:
+                if not self._param.is_thermoxels:
                     # This swaps outputs to train Plenoxels on thermal images :
                     im_thermal = im.mean(axis=2).unsqueeze(-1)
 
