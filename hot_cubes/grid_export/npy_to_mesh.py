@@ -1,39 +1,38 @@
-import numpy as np
-import meshio
+"""
+Converts the thermoxels checkpoints to a hexahedron mesh.
+"""
+
 import logging
 from pathlib import Path
-import argparse
+
+import meshio
+import numpy as np
+import pyvista
+import pyvista.examples
+import tyro
+
 
 def convert_to_hex8_mesh(
-    npz_file_path: Path,
-    percentile_threshold: float = 90,
-    density_threshold: float | None = None,
-    put_colors: bool = False,
-    perform_filtering: bool = True,
+    ckpt_path: Path,
+    density_threshold: float = 22.0,
 ) -> None:
     """
-    Exports a svox2.SparseGrid saved as an npz file to a hex8 mesh .msh file.
-    If not specified, the density threshold is automatically set to the 90th percentile
-    of the density values.
+    Exports a svox2.SparseGrid saved as `npz_file_path` to a hex8 mesh .msh file.
+    If not specified, the `density_threshold` is automatically set to the 90th
+    percentile of the density values.
     Output file is saved in the same folder as the input file.
     """
 
-    grid = np.load("ckpt/links.npy")
+    grid = np.load(Path(ckpt_path, "links.npy"))
     mask = grid >= 0
     idxs = grid[mask]
-    density_data = np.load("ckpt/density_data.npy")
+    density_data = np.load(Path(ckpt_path, "density_data.npy"))
     density = density_data[idxs][:, 0].astype(float)
     grid[mask] = density
 
     # MinMax density values for information
     logging.info(f"min density: {density_data.min()}")
     logging.info(f"max density: {density_data.max()}")
-
-    # Apply the density_threshold to the grid
-    density_threshold = 22.0
-    if density_threshold is None:
-        density_threshold = np.percentile(density_data, percentile_threshold)
-    logging.info(f"threshold density value: {density_threshold}")
 
     thresholded_grid = grid >= density_threshold
 
@@ -43,56 +42,60 @@ def convert_to_hex8_mesh(
     )
 
     # Create a list of hexahedral elements (8 vertices per voxel)
-    elements = []
-    points = []
-    point_index = {}
+    cells: list[list[int]] = []
+    points: list[tuple[float, float, float]] = []
+    point_indices: dict[tuple[float, float, float], int] = {}
 
     # Generate points and elements for the hexahedral mesh
     nx, ny, nz = thresholded_grid.shape
 
-    for i in range(nx - 1):
-        for j in range(ny - 1):
-            for k in range(nz - 1):
-                if thresholded_grid[i, j, k]: # Binary filling
-                    # Define the 8 corners of the voxel (hexahedron)
-                    voxel_points = [
-                        (i, j, k),
-                        (i + 1, j, k),
-                        (i + 1, j + 1, k),
-                        (i, j + 1, k),
-                        (i, j, k + 1),
-                        (i + 1, j, k + 1),
-                        (i + 1, j + 1, k + 1),
-                        (i, j + 1, k + 1),
-                    ]
+    for x in range(nx - 1):
+        for y in range(ny - 1):
+            for z in range(nz - 1):
+                if not thresholded_grid[x, y, z]:
+                    continue
+                # Binary filling
+                # Define the 8 corners of the voxel (hexahedron)
+                voxel_points = [
+                    (x, y, z),
+                    (x + 1, y, z),
+                    (x + 1, y + 1, z),
+                    (x, y + 1, z),
+                    (x, y, z + 1),
+                    (x + 1, y, z + 1),
+                    (x + 1, y + 1, z + 1),
+                    (x, y + 1, z + 1),
+                ]
 
-                    # Add the points if they haven't been added already
-                    element_indices = []
-                    for point in voxel_points:
-                        if point not in point_index:
-                            point_index[point] = len(points)
-                            points.append(point)
-                        element_indices.append(point_index[point])
+                # Add the points if they haven't been added already
+                cell: list[int] = []
+                for point in voxel_points:
+                    if point not in point_indices:
+                        point_indices[point] = len(points)
+                        points.append(point)
+                    cell.append(point_indices[point])
 
-                    # Add the hexahedron element (8 indices)
-                    elements.append(element_indices)
-
-
-    points = np.array(points, dtype=float)
+                # Add the hexahedron element (8 indices)
+                cells.append(cell)
 
     # Export mesh using meshio
-    cells = [("hexahedron", np.array(elements))]
-    output_file = str(npz_file_path).split(".")[0] + "_output_mesh.msh"
-    meshio.write(output_file, meshio.Mesh(points=points, cells=cells))
+    output_path = Path(ckpt_path, "hex8_mesh.vtk")
+    meshio_points = np.array(points, dtype=float)
+    meshio_cells = [("hexahedron", np.array(cells))]
+    meshio.write(output_path, meshio.Mesh(points=meshio_points, cells=meshio_cells))
 
-    logging.info(f"Hex8 mesh successfully exported to {output_file}")
+    # Keep only the biggest connected component of the hex8 mesh
+    pv_mesh = pyvista.read(output_path)
+    if pv_mesh is None:
+        raise RuntimeError("mesh file could not be read by Pyvista")
+    pv_mesh.connectivity(extraction_mode="largest", inplace=True)
+    pyvista.save_meshio(
+        filename=output_path,
+        mesh=pv_mesh,
+    )
+
+    logging.info(f"Hex8 mesh successfully exported to {output_path}")
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Convert .npy file to .msh HEX8 format")
-    parser.add_argument("--npy-file", type=str, required=True, help="Path to the .npy file")
-    parser.add_argument("--msh-file", type=str, required=True, help="Path to the output .msh file")
-
-    args = parser.parse_args()
-
-    convert_to_hex8_mesh(args.npy_file, args.msh_file)
+    tyro.cli(convert_to_hex8_mesh)
