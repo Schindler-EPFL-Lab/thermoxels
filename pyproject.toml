@@ -10,7 +10,12 @@ readme = "README.md"
 requires-python = ">=3.10"
 keywords = []
 authors = []
-dependencies = ["tyro >= 0.8.8", "meshio >= 5.3.5", "pyvista >= 0.44.1"]
+dependencies = [
+   "tyro >= 0.8.8",
+   "meshio >= 5.3.5",
+   "pyvista >= 0.44.1",
+   "mlflow >= 2.16.0",
+]
 
 [project.optional-dependencies]
 azure = ["azure-ml-utils"]

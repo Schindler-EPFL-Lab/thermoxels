@@ -1,6 +1,7 @@
 import logging
 import sys
 from dataclasses import asdict
+from datetime import datetime
 from pathlib import Path
 
 import mlflow
@@ -43,6 +44,8 @@ def get_arg() -> TrainingParam:
 
 
 def main():
+    start_time = datetime.now()
+
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     torch.manual_seed(20200823)
@@ -72,6 +75,8 @@ def main():
     trainer = ThermoxelTrainer(dataset=dataset, dataset_val=dataset_val, param=param)
 
     trainer.optimize(factor=factor)
+
+    mlflow.log_metric("execution time", (datetime.now() - start_time).total_seconds())
 
 
 if __name__ == "__main__":
