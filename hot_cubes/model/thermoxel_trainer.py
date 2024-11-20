@@ -285,9 +285,9 @@ class ThermoxelTrainer:
 
             rgb_pred, temp_pred = self.grid.volume_render_fused_rgbt(
                 rays=rays,
-                rgb_gt=rgb_gt if not self._param.is_thermoxels else thermal_gt,
+                rgb_gt=rgb_gt if self._param.is_thermoxels else thermal_gt,
                 # This swaps outputs to train Plenoxels on thermal images
-                temperature_gt=thermal_gt if not self._param.is_thermoxels else None,
+                temperature_gt=thermal_gt if self._param.is_thermoxels else None,
                 # This swaps outputs to train Plenoxels on thermal images
                 t_loss=self._param.t_loss,
                 beta_loss=self._param.lambda_beta,
@@ -308,15 +308,22 @@ class ThermoxelTrainer:
             _, rgb_mse, rgb_psnr = ThermoxelTrainer.compute_mse_psnr(rgb_gt, rgb_pred)
             ThermoxelTrainer._update_rgb_stats(rgb_mse, rgb_psnr, train_stats)
 
-            _, thermal_mse, thermal_psnr = ThermoxelTrainer.compute_mse_psnr(
-                thermal_gt, temp_pred
-            )
+            if self._param.is_thermoxels and temp_pred is not None:
+                _, thermal_mse, thermal_psnr = ThermoxelTrainer.compute_mse_psnr(
+                    thermal_gt, temp_pred
+                )
 
-            thermal_mae = torch.abs(thermal_gt - temp_pred).mean().item()
+                thermal_mae = torch.abs(thermal_gt - temp_pred).mean().item()
 
-            ThermoxelTrainer._update_thermal_stats(
-                thermal_mse, thermal_psnr, None, None, thermal_mae, None, train_stats
-            )
+                ThermoxelTrainer._update_thermal_stats(
+                    thermal_mse,
+                    thermal_psnr,
+                    None,
+                    None,
+                    thermal_mae,
+                    None,
+                    train_stats,
+                )
 
             # Stats
             log_every = self._param.epoch_size // self._param.log_per_epoch

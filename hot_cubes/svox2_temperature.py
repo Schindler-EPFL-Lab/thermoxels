@@ -240,6 +240,8 @@ class _VolumeRenderFunction(autograd.Function):
         )
         rays = Rays(origins, dirs)._to_cpp()
 
+        _C.render_pos_forward_rgbt(grid, rays, opt, color, temperature)
+
         ctx.save_for_backward(color, temperature)
         ctx.dirs = dirs
         ctx.grid = grid
@@ -1270,7 +1272,11 @@ class SparseGrid(nn.Module):
             )
             grad_holder.mask_background_out = self.sparse_background_indexer
 
-        if self.is_thermoxels:
+        if (
+            self.is_thermoxels
+            and temperature_gt is not None
+            and temperature_out is not None
+        ):
             grad_holder.grad_temperature_out = grad_temperature
 
             custom_gradient = torch.zeros_like(temperature_gt).to(
@@ -1382,11 +1388,7 @@ class SparseGrid(nn.Module):
         :param randomize: bool, whether to enable randomness
         :return: (H, W, 3), predicted RGB image
         """
-        if (
-            not torch.is_grad_enabled()
-            and not return_raylen
-            and not self.is_thermoxels
-        ):
+        if not torch.is_grad_enabled() and not return_raylen and not self.is_thermoxels:
             # Use the fast image render kernel if available
             cu_fn = _C.__dict__["volume_render_cuvol_image"]
 
