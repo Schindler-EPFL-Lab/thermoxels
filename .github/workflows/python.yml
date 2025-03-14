@@ -19,21 +19,20 @@ jobs:
 
       - uses: astral-sh/ruff-action@v3
 
-      - name: Set up Python 3.10
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: "Set up Python"
         uses: actions/setup-python@v5
         with:
-          python-version-file: "pyproject.toml"
-          cache: "pip"
-      - name: Install dependencies
-        run: |
-          python3.10 -m pip install --upgrade pip
-      - name: dependencies and set up unit test
-        run: |
-          cd dockerfile
-          python3.10 -m pip install -r requirements.txt
-          cd ..
-      - name: install thermoxels
-        run: python3.10 -m pip install -e .
-      - name: Test with unittest
-        run: |
-          python3.10 -m unittest discover tests
+          python-version-file: ".python-version"
+
+      - name: Install the project
+        run: uv sync --frozen
+
+      - name: Run tests
+        run: uv run --frozen python -m unittest discover tests
+
