@@ -20,7 +20,6 @@ from plenoxels.opt.util.dataset import datasets  # noqa: E402
 
 
 def get_arg() -> TrainingParam:
-
     param = tyro.cli(TrainingParam)
 
     if param.lr_sigma_final >= param.lr_sigma:
