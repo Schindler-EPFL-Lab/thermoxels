@@ -19,6 +19,8 @@ dependencies = [
    "open3d>=0.19.0",
    "trimesh>=4.6.4",
    "scikit-image>=0.25.2",
+   "opencv-python>=4.11.0.86",
+   "torch>=2.6.0",
 ]
 
 [project.optional-dependencies]

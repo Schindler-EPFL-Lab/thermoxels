@@ -152,7 +152,6 @@ class ThermoSceneDataset(DatasetBase):
         self.intrins = self.intrins_full
 
     def get_intrinsic_parameters(self) -> float:
-
         intrinsic_path = ThermoSceneDataset.find_json_structure(self.root)
 
         with open(intrinsic_path) as file:
@@ -164,7 +163,6 @@ class ThermoSceneDataset(DatasetBase):
         return fx, fy, cx, cy
 
     def get_temperature_metadata(self) -> float:
-
         metadat_path = self.root / Path("temperature_bounds.json")
 
         with open(metadat_path) as file:
@@ -317,7 +315,6 @@ class ThermoSceneDataset(DatasetBase):
 
     @staticmethod
     def _get_train_val_files(orig_img_files: list[str]) -> tuple[list[str], list[str]]:
-
         total_files = ThermoSceneDataset._get_data_files(
             orig_img_files=orig_img_files, prefix="frame_train_"
         )
@@ -349,7 +346,6 @@ class ThermoSceneDataset(DatasetBase):
         assert False, "None of " + str(candidates) + " found in data directory"
 
     def _generate_rays(self, dirs: torch.Tensor, factor: float = 1.0) -> ThermalRays:
-
         rgb_rays = super()._generate_rays(dirs=dirs, factor=factor)
 
         if factor != 1:
