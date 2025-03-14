@@ -13,6 +13,9 @@ sys.path.append(".")
 sys.path.append("./hot_cubes")
 
 
+from hot_cubes.datasets.datasets_utils.colmap_json_to_txt import (
+    convert_colmap_json_to_txt,
+)
 from hot_cubes.model.thermoxel_trainer import ThermoxelTrainer  # noqa: E402
 from hot_cubes.model.training_param import TrainingParam  # noqa: E402
 from plenoxels.opt.util import config_util  # noqa: E402
@@ -52,8 +55,13 @@ def main():
     param = get_arg()
     factor = 1
 
+    data_dir_path = Path(param.data_dir)
+    # Transform our nerfstudio dataset into a compatible dataset
+    new_dataset = Path("./data")
+    convert_colmap_json_to_txt(dataset_path=data_dir_path, save_to=new_dataset)
+
     dataset = datasets[param.dataset_type](
-        param.data_dir,
+        new_dataset,
         split="train",
         device=device,
         factor=factor,
@@ -64,7 +72,7 @@ def main():
     )
 
     dataset_val = datasets[param.dataset_type](
-        param.data_dir,
+        new_dataset,
         split="val",
         rgb_dropout=param.rgb_dropout,
         thermal_dropout=param.thermal_dropout,

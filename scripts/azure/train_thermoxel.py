@@ -7,6 +7,21 @@ from azure.ai.ml.constants import AssetTypes, InputOutputModes
 from azure_ml_utils.azure_connect import get_client
 
 
+def get_data_path_and_thermoscenes_id(
+    ml_client, main_scene, scene_name, version
+) -> tuple[str, str]:
+    """
+    Obtain ThermoScenes dataset id and the path to the 'scene_name' dataset under the
+    ThermoScenes dataset folder on Azure.
+
+    :returns: A tuple of strings of scene_name' dataset path and ThermoScenes dataset id
+    """
+    thermoscenes_dataset = ml_client.data.get(name=main_scene, version=version)
+    assert thermoscenes_dataset.id is not None
+    dataset_path = str(thermoscenes_dataset.path) + str(scene_name) + "/"
+    return dataset_path, thermoscenes_dataset.id
+
+
 @dataclass
 class EvalParameters:
     environment_version: str = "latest"  # 78
@@ -14,6 +29,19 @@ class EvalParameters:
     """Experiment name in azure"""
 
     model_version: str = "1"
+
+    main_scene: str = "ThermoScenes"
+    """
+    Name of the main scene folder that contains different subscenes on Azure. For this\
+    project, it is ThermoScenes.
+    """
+    scene_name: str = "buildingA_spring"
+    """
+    Name of the sub scene/object under the main_scene folder to be assigned to the\
+    registered output of the script on Azure
+    """
+    version: str = "3"
+    """Version of the main_scene dataset"""
 
     @property
     def environment(self) -> str:
@@ -25,7 +53,24 @@ def main() -> None:
 
     ml_client = get_client()
 
-    data_asset = ml_client.data.get("buildingA_spring-plenoxel", version="3")
+    dataset_path, thermoscens_dataset_id = get_data_path_and_thermoscenes_id(
+        ml_client=ml_client,
+        main_scene=params.main_scene,
+        scene_name=params.scene_name,
+        version=params.version,
+    )
+    job_inputs = dict(
+        data=Input(
+            type=AssetTypes.URI_FOLDER,  # type: ignore
+            path=dataset_path,
+            mode=InputOutputModes.RO_MOUNT,
+        ),
+        thermoscenes_dataset=Input(
+            type=AssetTypes.URI_FOLDER,  # type: ignore
+            path=thermoscens_dataset_id,
+            mode=InputOutputModes.RO_MOUNT,
+        ),
+    )
 
     job_name = "train-thermoxel-" + datetime.now().strftime("%d-%m-%Y-%H%M%S")
 
@@ -35,13 +80,7 @@ def main() -> None:
         env_version_string = "@" + params.environment_version
 
     job = command(
-        inputs={
-            "data": Input(
-                path=data_asset.id,
-                type=AssetTypes.URI_FOLDER,
-                mode=InputOutputModes.MOUNT,
-            )
-        },
+        inputs=job_inputs,
         code=".",
         environment=params.environment + env_version_string,
         compute="nerf-a100-2",
