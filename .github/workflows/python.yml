@@ -16,6 +16,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
+      - uses: astral-sh/ruff-action@v3
+
       - name: Set up Python 3.10
         uses: actions/setup-python@v5
         with:
@@ -24,13 +27,9 @@ jobs:
       - name: Install dependencies
         run: |
           python3.10 -m pip install --upgrade pip
-          python3.10 -m pip install flake8
-      - name: Lint with flake8
-        run: |
-          flake8 . --count --show-source --statistics
       - name: dependencies and set up unit test
         run: |
-          cd dockerfile 
+          cd dockerfile
           python3.10 -m pip install -r requirements.txt
           cd ..
       - name: install thermoxels

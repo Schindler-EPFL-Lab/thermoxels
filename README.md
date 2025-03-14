@@ -101,6 +101,5 @@ If needed, you can provide an initial rotation angle prior to the x-axis rotatio
 
 We welcome contributions to Thermoxels. Please look at existing issues on the code.
 
-We format code using [black](https://pypi.org/project/black/) and follow PEP8.
+We format code using ruff and follow PEP8.
 The code needs to be type annotated and following our documentation style.
-
