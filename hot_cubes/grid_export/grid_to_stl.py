@@ -1,14 +1,14 @@
-import argparse
 import logging
 from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
 import trimesh
+import tyro
 
 
 def convert_to_mesh(
-    npz_file_path: Path,
+    npz_file: Path,
     percentile_threshold: float = 90,
     density_threshold: float | None = None,
     put_colors: bool = False,
@@ -20,7 +20,7 @@ def convert_to_mesh(
     of the density values.
     Output file is saved in the same folder as the input file.
     """
-    data = np.load(npz_file_path)
+    data = np.load(npz_file)
 
     # Replace the grid with the density values
     grid = data["links"]
@@ -73,53 +73,12 @@ def convert_to_mesh(
         mesh.visual.face_colors = face_colors
 
     # Export the mesh to a ply file
-    output_file = str(npz_file_path).split(".")[0] + "_output_mesh.obj"
+    output_file = str(npz_file).split(".")[0] + "_output_mesh.obj"
     mesh.export(output_file)
 
     logging.info(f"Mesh successfully exported to {output_file}")
 
 
 if __name__ == "__main__":
-
     logging.basicConfig(level=logging.INFO)
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--npz-file",
-        metavar="path",
-        required=True,
-        help="path of ckpt.npz",
-    )
-
-    parser.add_argument(
-        "--percentile-threshold",
-        metavar=float,
-        default=90,
-        required=False,
-        help="percentile threshold ",
-    )
-
-    parser.add_argument(
-        "--colors",
-        metavar=bool,
-        default=False,
-        required=False,
-        help="put colors in the mesh",
-    )
-
-    parser.add_argument(
-        "--filtering",
-        metavar=bool,
-        default=True,
-        required=False,
-        help="Filter the mesh",
-    )
-
-    args = parser.parse_args()
-
-    convert_to_mesh(
-        npz_file_path=Path(args.npz_file),
-        percentile_threshold=float(args.percentile_threshold),
-        put_colors=args.colors,
-        perform_filtering=args.filtering,
-    )
+    tyro.cli(convert_to_mesh)

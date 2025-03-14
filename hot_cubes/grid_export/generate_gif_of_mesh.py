@@ -66,7 +66,7 @@ def create_gif(output_dir: Path, gif_path: Path) -> None:
 
 
 def main(
-    obj_file_path: str,
+    obj_file_path: Path,
     total_frames: int = 36,
     init_x_angle: float = 0.0,
     init_y_angle: float = 0.0,
