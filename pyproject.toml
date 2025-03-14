@@ -54,7 +54,7 @@ members = [
 [tool.ruff]
 line-length = 88
 indent-width = 4
-extend-exclude = ["*.ipynb"]
+extend-exclude = ["*.ipynb", "plenoxels/"]
 
 [tool.ruff.lint]
 # Enable Pyflakes (`F`) and a subset of the pycodestyle (`E`)  codes by default.
