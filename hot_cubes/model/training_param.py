@@ -14,6 +14,7 @@ class TrainingParam:
     render_dir: str = "./"
     config_file: str | None = None
     train_dir: str = "./"
+    scene_name: str | None = None
 
     # General settings
     reso: str = "[[128, 128, 128], [256, 256, 256], [512, 512, 512], [640, 640, 640]]"

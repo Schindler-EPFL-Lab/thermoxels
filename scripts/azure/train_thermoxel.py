@@ -42,6 +42,7 @@ class EvalParameters:
     """
     version: str = "3"
     """Version of the main_scene dataset"""
+    is_thermoxels: bool = True
 
     @property
     def environment(self) -> str:
@@ -72,8 +73,37 @@ def main() -> None:
         ),
     )
 
-    job_name = "train-thermoxel-" + datetime.now().strftime("%d-%m-%Y-%H%M%S")
+    job_name = (
+        "train-thermoxel-"
+        + params.scene_name
+        + "-"
+        + datetime.now().strftime("%d-%m-%Y-%H%M%S")
+    )
 
+    cmd = (
+        "CUDA_LAUNCH_BLOCKING=1 python3.10 "
+        "hot_cubes/cli/train_thermoxel_model.py "
+        "--data_dir ${{inputs.data}} "
+        "--train_dir ./ "
+        "--n_epoch 6 "
+        "--scene-radius 3.0 "
+        "--tv_sparsity 0.25 "
+        "--tv_sh_sparsity 0.25 "
+        "--tv_temp_sparsity 0.1 "
+        "--save_every 0 "
+        "--eval_every 0 "
+        "--log_mse_image "
+        "--log_mae_image "
+        "--scene-name " + params.scene_name
+    )
+    if not params.is_thermoxels:
+        cmd += " --no-is-thermoxels"
+        job_name = (
+            "train-plenoxel-t-"
+            + params.scene_name
+            + "-"
+            + datetime.now().strftime("%d-%m-%Y-%H%M%S")
+        )
     if params.environment_version.isnumeric():
         env_version_string = ":" + params.environment_version
     else:
@@ -84,22 +114,7 @@ def main() -> None:
         code=".",
         environment=params.environment + env_version_string,
         compute="nerf-a100-2",
-        command=(
-            "CUDA_LAUNCH_BLOCKING=1 python3.10 "
-            "hot_cubes/cli/train_thermoxel_model.py "
-            "--data_dir ${{inputs.data}} "
-            "--train_dir ./ "
-            "--n_epoch 6 "
-            "--scene-radius 3.0 "
-            "--tv_sparsity 0.25 "
-            "--tv_sh_sparsity 0.25 "
-            "--tv_temp_sparsity 0.1 "
-            "--save_every 0 "
-            "--eval_every 0 "
-            "--log_mse_image "
-            "--log_mae_image "
-            "--is_thermoxels "
-        ),
+        command=cmd,
         experiment_name=params.experiment_name,
         display_name=job_name,
         name=job_name,
