@@ -6,6 +6,8 @@ from azure.ai.ml import Input, command
 from azure.ai.ml.constants import AssetTypes, InputOutputModes
 from azure_ml_utils.azure_connect import get_client
 
+from hot_cubes.model.training_param import TrainingParam
+
 
 def get_data_path_and_thermoscenes_id(
     ml_client, main_scene, scene_name, version
@@ -24,6 +26,7 @@ def get_data_path_and_thermoscenes_id(
 
 @dataclass
 class EvalParameters:
+    training_param: TrainingParam
     environment_version: str = "latest"  # 78
     experiment_name: str = "train-thermoxel"
     """Experiment name in azure"""
@@ -32,32 +35,33 @@ class EvalParameters:
 
     main_scene: str = "ThermoScenes"
     """
-    Name of the main scene folder that contains different subscenes on Azure. For this\
-    project, it is ThermoScenes.
-    """
-    scene_name: str = "buildingA_spring"
-    """
     Name of the sub scene/object under the main_scene folder to be assigned to the\
     registered output of the script on Azure
     """
     version: str = "3"
-    """Version of the main_scene dataset"""
-    is_thermoxels: bool = True
 
     @property
     def environment(self) -> str:
         return "thermoxel-newtempfield-310"
 
+    def __post_init__(self):
+        if self.training_param.scene_name is None:
+            raise ValueError("scene_name must be provided")
+
+        if self.training_param.data_dir is not None:
+            raise ValueError("data_dir must not be provided")
+
 
 def main() -> None:
     params = tyro.cli(EvalParameters)
+    assert params.training_param.scene_name is not None
 
     ml_client = get_client()
 
     dataset_path, thermoscens_dataset_id = get_data_path_and_thermoscenes_id(
         ml_client=ml_client,
         main_scene=params.main_scene,
-        scene_name=params.scene_name,
+        scene_name=params.training_param.scene_name,
         version=params.version,
     )
     job_inputs = dict(
@@ -75,7 +79,7 @@ def main() -> None:
 
     job_name = (
         "train-thermoxel-"
-        + params.scene_name
+        + params.training_param.scene_name
         + "-"
         + datetime.now().strftime("%d-%m-%Y-%H%M%S")
     )
@@ -85,22 +89,25 @@ def main() -> None:
         "hot_cubes/cli/train_thermoxel_model.py "
         "--data_dir ${{inputs.data}} "
         "--train_dir ./ "
-        "--n_epoch 6 "
-        "--scene-radius 3.0 "
-        "--tv_sparsity 0.25 "
-        "--tv_sh_sparsity 0.25 "
+        "--n_epoch "
+        + str(params.training_param.n_epoch)
+        + " --scene-radius "
+        + str(params.training_param.scene_radius)
+        + " --tv_sparsity "
+        + str(params.training_param.tv_sparsity)
+        + " --tv_sh_sparsity 0.25 "
         "--tv_temp_sparsity 0.1 "
         "--save_every 0 "
         "--eval_every 0 "
         "--log_mse_image "
         "--log_mae_image "
-        "--scene-name " + params.scene_name
+        "--scene-name " + params.training_param.scene_name
     )
-    if not params.is_thermoxels:
+    if not params.training_param.is_thermoxels:
         cmd += " --no-is-thermoxels"
         job_name = (
             "train-plenoxel-t-"
-            + params.scene_name
+            + params.training_param.scene_name
             + "-"
             + datetime.now().strftime("%d-%m-%Y-%H%M%S")
         )

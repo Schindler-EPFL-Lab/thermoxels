@@ -10,7 +10,7 @@ class TrainingParam:
     """
 
     # Directory settings
-    data_dir: str
+    data_dir: str | None = None
     render_dir: str = "./"
     config_file: str | None = None
     train_dir: str = "./"
@@ -169,6 +169,10 @@ class TrainingParam:
     # Dropout options
     rgb_dropout: float = 0.0
     thermal_dropout: float = 0.0
+
+    def __post_init__(self):
+        if self.scene_name is None and self.data_dir is None:
+            raise ValueError("Either scene_name or data_dir must be provided")
 
     def update_from_dict(self, updates: dict) -> None:
         """

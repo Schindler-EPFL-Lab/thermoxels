@@ -71,8 +71,7 @@ This will save the model as `ckpt.npz` and the rendered images in the training f
 You can export a mesh from the trained model using the following script:
 
 ```bash
-python hot_cubes/grid_export/grid_to_stl.py --npz-file ckpt.npz --color true
---percentile-threshold 90
+python hot_cubes/grid_export/grid_to_stl.py --npz-file ckpt.npz --put-colors --percentile-threshold 90
 ```
 
 This will save the mesh in obj format in the same folder as the npz file. Color is
