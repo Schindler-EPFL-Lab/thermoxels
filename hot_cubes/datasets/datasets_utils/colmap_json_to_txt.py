@@ -28,7 +28,7 @@ def find_json_structure(dataset_path: pathlib.Path) -> pathlib.Path:
 
 
 def convert_colmap_json_to_txt(
-    dataset_path: pathlib.Path, save_to: pathlib.Path | None = None
+    dataset_path: pathlib.Path, save_to: pathlib.Path
 ) -> None:
     """
     This function is used to convert a dataset from rebel nerf having a transforms.json
@@ -36,8 +36,10 @@ def convert_colmap_json_to_txt(
     Output files are saved in the folder dataset_path/poses/image_name.txt
     """
 
-    if save_to is None:
-        save_to = dataset_path
+    if save_to == dataset_path:
+        raise RuntimeError(
+            "The save_to folder must be different from the dataset folder"
+        )
 
     save_to.mkdir(exist_ok=True)
 
@@ -54,6 +56,14 @@ def convert_colmap_json_to_txt(
     )
 
     np.savetxt(save_to / "intrinsics.txt", intrinsic_matrix)
+
+    temperature_bound_file = dataset_path / "temperature_bounds.json"
+    if temperature_bound_file.exists():
+        shutil.copyfile(temperature_bound_file, save_to / "temperature_bounds.json")
+
+    transform_file = dataset_path / "transforms.json"
+    if transform_file.exists():
+        shutil.copyfile(transform_file, save_to / "transforms.json")
 
     # OpenGL -> OpenCV
     cam_trans = np.diag(np.array([1.0, -1.0, -1.0, 1.0]))
