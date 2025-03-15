@@ -97,7 +97,6 @@ class ThermoxelTrainer:
         factor: float,
         use_sparsify: bool = True,
     ) -> None:
-
         # DC -> gray; mind the SH scaling!
         self.grid.sh_data.data[:] = 0.0
         self.grid.density_data.data[:] = (
@@ -308,6 +307,7 @@ class ThermoxelTrainer:
             _, rgb_mse, rgb_psnr = ThermoxelTrainer.compute_mse_psnr(rgb_gt, rgb_pred)
             ThermoxelTrainer._update_rgb_stats(rgb_mse, rgb_psnr, train_stats)
 
+            thermal_psnr = -100
             if self._param.is_thermoxels and temp_pred is not None:
                 _, thermal_mse, thermal_psnr = ThermoxelTrainer.compute_mse_psnr(
                     thermal_gt, temp_pred
@@ -356,7 +356,6 @@ class ThermoxelTrainer:
         global_step_id: int,
         lr_temperature: float,
     ) -> None:
-
         if self._param.lambda_tv_temp > 0.0:
             self.grid.inplace_tv_temperature_grad(
                 self.grid.temperature_data.grad,
@@ -451,7 +450,6 @@ class ThermoxelTrainer:
             }
             img_ids = range(0, self.dataset_val.n_images, 1)
             for i, img_id in tqdm(enumerate(img_ids), total=len(img_ids)):
-
                 c2w = self.dataset_val.c2w[img_id].to(device=device)
                 cam = svox2.Camera(
                     c2w,
@@ -625,7 +623,9 @@ class ThermoxelTrainer:
         mlflow.log_image(np.array(concat_im), name)
 
     @staticmethod
-    def compute_mse_psnr(im: torch.tensor, im_gt: torch.tensor) -> None:
+    def compute_mse_psnr(
+        im: torch.Tensor, im_gt: torch.Tensor
+    ) -> tuple[torch.Tensor, float, float]:
         mse_map = (im.cpu() - im_gt.cpu()) ** 2
         mse_num = mse_map.mean().item()
         psnr = compute_psnr(mse_num)
