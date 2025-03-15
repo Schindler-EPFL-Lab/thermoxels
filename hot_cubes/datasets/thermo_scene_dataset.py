@@ -343,7 +343,9 @@ class ThermoSceneDataset(DatasetBase):
         for cand in candidates:
             if path.isdir(path.join(base_path, cand)):
                 return base_path / Path(cand)
-        assert False, "None of " + str(candidates) + " found in data directory"
+        assert False, (
+            "None of " + str(candidates) + " found in data directory" + str(base_path)
+        )
 
     def _generate_rays(self, dirs: torch.Tensor, factor: float = 1.0) -> ThermalRays:
         rgb_rays = super()._generate_rays(dirs=dirs, factor=factor)
