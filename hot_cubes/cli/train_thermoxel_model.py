@@ -57,11 +57,12 @@ def main():
 
     data_dir_path = Path(param.data_dir)
     # Transform our nerfstudio dataset into a compatible dataset
-    new_dataset = Path("./data")
+    new_dataset = Path("./outputs/dataset")
     convert_colmap_json_to_txt(dataset_path=data_dir_path, save_to=new_dataset)
+    param.data_dir = str(new_dataset)
 
     dataset = datasets[param.dataset_type](
-        new_dataset,
+        param.data_dir,
         split="train",
         device=device,
         factor=factor,
@@ -72,7 +73,7 @@ def main():
     )
 
     dataset_val = datasets[param.dataset_type](
-        new_dataset,
+        param.data_dir,
         split="val",
         rgb_dropout=param.rgb_dropout,
         thermal_dropout=param.thermal_dropout,
