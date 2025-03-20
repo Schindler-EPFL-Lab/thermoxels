@@ -1,3 +1,4 @@
+import json
 import logging
 import sys
 from dataclasses import asdict
@@ -80,7 +81,18 @@ def main():
         **config_util.build_data_options(param),
     )
 
-    trainer = ThermoxelTrainer(dataset=dataset, dataset_val=dataset_val, param=param)
+    with open(Path(param.data_dir, "temperature_bounds.json")) as file:
+        data = json.load(file)
+    t_max = data["absolute_max_temperature"]
+    t_min = data["absolute_min_temperature"]
+
+    trainer = ThermoxelTrainer(
+        dataset=dataset,
+        dataset_val=dataset_val,
+        param=param,
+        min_temperature=t_min,
+        max_temperature=t_max,
+    )
 
     trainer.optimize(factor=factor)
 

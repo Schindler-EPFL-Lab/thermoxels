@@ -1,19 +1,19 @@
 import logging
 from dataclasses import dataclass
 from functools import reduce
+from pathlib import Path
 from typing import List, Optional, Tuple, Union
 from warnings import warn
 
 import numpy as np
 import svox2.csrc as _C
 import torch
+from scipy.constants import convert_temperature
 from torch import autograd, nn
 from tqdm import tqdm
 
 from plenoxels.svox2 import utils
-from plenoxels.svox2.defs import *
-
-# flake8: noqa
+from plenoxels.svox2.defs import *  # noqa: F403
 
 
 @dataclass
@@ -184,7 +184,6 @@ class _SampleGridAutogradFunction(autograd.Function):
         want_colors: bool,
         want_temperatureerature: bool,
     ) -> Tuple[torch.Tensor, torch.Tensor, Optional[torch.Tensor]]:
-
         assert not points.requires_grad, "Point gradient not supported"
 
         out_density, out_sh, out_temperature = _C.sample_grid(
@@ -1159,10 +1158,7 @@ class SparseGrid(nn.Module):
         :return: (N, 3), predicted RGB
         """
         if (
-            use_kernel
-            and self.links.is_cuda
-            and _C is not None
-            and not return_raylen
+            use_kernel and self.links.is_cuda and _C is not None and not return_raylen
             # and not self.is_thermoxels
         ):
             assert rays.is_cuda
@@ -1846,20 +1842,64 @@ class SparseGrid(nn.Module):
             roffset.to(device=points.device), points, rscaling.to(device=points.device)
         )
 
-    def save(self, path: str, compress: bool = False):
+    def save(
+        self,
+        path: Path,
+        min_temperature: float,
+        max_temperature: float,
+        compress: bool = False,
+    ):
         """
         Save to a path
         """
+
+        def _convert_value_from_to_interval(
+            value: float,
+            from_start: float,
+            from_end: float,
+            to_start: float,
+            to_end: float,
+        ) -> float:
+            """
+            Takes `value` in the interval `interval_from` and convert it to the
+            corresponding value in `interval_to`.
+
+            :returns: the converted value
+            :raises: Value Error if intervals do not hold two and only two values, or if
+            interval startpoint bigger than endpoint.
+            """
+            if from_end < from_start or to_end < to_start:
+                raise ValueError(
+                    "Interval startpoint must be less than or equal to the endpoint."
+                )
+            return to_start + (to_end - to_start) * (value - from_start) / (
+                from_end - from_start
+            )
+
         save_fn = np.savez_compressed if compress else np.savez
+
+        temperature_data = self.temperature_data.data.cpu().numpy().astype(np.float16)
+        new_temperature_data: list[float] = []
+        for temperature in temperature_data:
+            temperature_in_celsius = _convert_value_from_to_interval(
+                np.clip(temperature, 0, 1),
+                from_start=0.0,
+                from_end=1.0,
+                to_start=min_temperature,
+                to_end=max_temperature,
+            )
+            temperature_in_kelvin = convert_temperature(
+                temperature_in_celsius, "Celsius", "Kelvin"
+            )
+            new_temperature_data.append(temperature_in_kelvin)
+
         data = {
             "radius": self.radius.numpy(),
             "center": self.center.numpy(),
             "links": self.links.cpu().numpy(),
             "density_data": self.density_data.data.cpu().numpy(),
             "sh_data": self.sh_data.data.cpu().numpy().astype(np.float16),
-            "temperature_data": self.temperature_data.data.cpu()
-            .numpy()
-            .astype(np.float16),
+            "temperature_data": np.array(new_temperature_data).astype(np.float16),
         }
 
         if self.use_background:
@@ -2254,7 +2294,6 @@ class SparseGrid(nn.Module):
         """
         _, _, _, _, grad = self._get_data_grads()
         with torch.no_grad():
-
             if self.sparse_temperature_grad_indexer is None:
                 scale = scaling / self.temperature_data.size(0)
                 grad[:] += scale * self.temperature_data[:]

@@ -28,11 +28,18 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 
 class ThermoxelTrainer:
     def __init__(
-        self, dataset: DatasetBase, dataset_val: DatasetBase, param: TrainingParam
+        self,
+        dataset: DatasetBase,
+        dataset_val: DatasetBase,
+        param: TrainingParam,
+        min_temperature: float,
+        max_temperature: float,
     ) -> None:
         self._param = param
         self.dataset = dataset
         self.dataset_val = dataset_val
+        self._min_temperature = min_temperature
+        self._max_temperature = max_temperature
 
         self.resolution_list = json.loads(self._param.reso)
         resolution_id = 0
@@ -150,7 +157,11 @@ class ThermoxelTrainer:
                 and not self._param.tune_mode
             ):
                 logging.info("Saving", self.ckpt_path)
-                self.grid.save(self.ckpt_path)
+                self.grid.save(
+                    self.ckpt_path,
+                    max_temperature=self._max_temperature,
+                    min_temperature=self._min_temperature,
+                )
 
             if (global_step_id_base - last_upsamp_step) < self._param.upsamp_every:
                 continue
@@ -213,7 +224,11 @@ class ThermoxelTrainer:
 
         self.eval_step()
         if not self._param.tune_nosave:
-            self.grid.save(self.ckpt_path)
+            self.grid.save(
+                self.ckpt_path,
+                max_temperature=self._max_temperature,
+                min_temperature=self._min_temperature,
+            )
             mlflow.log_artifact(self.ckpt_path)
             self.test_step()
 
