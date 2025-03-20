@@ -10,16 +10,19 @@ from hot_cubes.datasets.datasets_utils.colmap_json_to_txt import (
 
 class TestClomapJsonTotext(unittest.TestCase):
     def test_intrinsic(self) -> None:
-
         dataset_path = Path("tests/colmap_to_json_test/mock_dataset/")
 
         assert dataset_path.exists()
 
-        convert_colmap_json_to_txt(dataset_path)
+        convert_colmap_json_to_txt(
+            dataset_path, Path("tests/colmap_to_json_test/mock_dataset_copy/")
+        )
 
-        intrinsic_path = Path("tests/colmap_to_json_test/mock_dataset/intrinsics.txt")
+        intrinsic_path = Path(
+            "tests/colmap_to_json_test/mock_dataset_copy/intrinsics.txt"
+        )
 
-        assert intrinsic_path.exists()
+        self.assertTrue(intrinsic_path.exists())
 
         intrinsic_matrix = np.loadtxt(intrinsic_path)
 
@@ -35,18 +38,17 @@ class TestClomapJsonTotext(unittest.TestCase):
         np.testing.assert_allclose(intrinsic_matrix, ground_truth, rtol=1e-5)
 
     def test_poses(self) -> None:
-
         dataset_path = Path("tests/colmap_to_json_test/mock_dataset/")
 
         assert dataset_path.exists()
 
-        convert_colmap_json_to_txt(dataset_path)
-
-        pose_path = Path(
-            "tests/colmap_to_json_test/mock_dataset/pose/frame_eval_00001.txt"
+        convert_colmap_json_to_txt(
+            dataset_path, Path("tests/colmap_to_json_test/mock_dataset_copy/")
         )
 
-        assert pose_path.exists()
+        pose_path = Path("tests/colmap_to_json_test/mock_dataset_copy/pose/e1.txt")
+
+        self.assertTrue(pose_path.exists())
 
         pose_matrix = np.loadtxt(pose_path)
 
