@@ -45,6 +45,12 @@ implementation of the ThermoScene class could rely on only on the .json format.
 
 ## Train and Evaluate
 
+### Azure
+
+Train on azure with `/scripts/azure/train_thermoxel.py --training-param.scene-name {scene_name}`.
+
+### Local
+
 To train and evaluate Thermoxels, first download our dataset and then use the following
 scripts
 
