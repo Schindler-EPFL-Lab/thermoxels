@@ -105,12 +105,12 @@ class ThermoxelTrainer:
         if to_folder is None:
             to_folder = self._param.model_save_path
 
-        self.grid.save(
-            to_folder / "ckpt.npz",
+        model_path = self.grid.save(
+            to_folder,
             max_temperature=self.max_temperature,
             min_temperature=self.min_temperature,
         )
-        mlflow.log_artifact(str(to_folder / "ckpt.npz"))
+        mlflow.log_artifact(str(model_path))
 
     def optimize(
         self,

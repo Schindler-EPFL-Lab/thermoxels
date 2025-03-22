@@ -45,7 +45,6 @@ class Evaluator:
 
         self._grid = svox2.SparseGrid.load(
             self._param.model_path,
-            self._param.ckpt,
             device=self._device,
             is_thermoxels=self._param.is_thermoxels,
         )

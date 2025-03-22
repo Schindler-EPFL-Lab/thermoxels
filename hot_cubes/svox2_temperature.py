@@ -1,3 +1,4 @@
+import json
 import logging
 from dataclasses import dataclass
 from functools import reduce
@@ -1842,46 +1843,51 @@ class SparseGrid(nn.Module):
             roffset.to(device=points.device), points, rscaling.to(device=points.device)
         )
 
+    @staticmethod
+    def _convert_value_from_to_interval(
+        value: float,
+        from_start: float,
+        from_end: float,
+        to_start: float,
+        to_end: float,
+    ) -> float:
+        """
+        Takes `value` in the interval `interval_from` and convert it to the
+        corresponding value in `interval_to`.
+
+        :returns: the converted value
+        :raises: Value Error if intervals do not hold two and only two values, or if
+        interval startpoint bigger than endpoint.
+        """
+        if from_end < from_start or to_end < to_start:
+            raise ValueError(
+                "Interval startpoint must be less than or equal to the endpoint."
+            )
+        return to_start + (to_end - to_start) * (value - from_start) / (
+            from_end - from_start
+        )
+
+    @staticmethod
+    def model_filename() -> str:
+        return "ckpt.npz"
+
     def save(
         self,
-        path: Path,
+        checkpoint_folder: Path,
         min_temperature: float,
         max_temperature: float,
         compress: bool = False,
-    ):
+    ) -> None:
         """
         Save to a path
         """
-
-        def _convert_value_from_to_interval(
-            value: float,
-            from_start: float,
-            from_end: float,
-            to_start: float,
-            to_end: float,
-        ) -> float:
-            """
-            Takes `value` in the interval `interval_from` and convert it to the
-            corresponding value in `interval_to`.
-
-            :returns: the converted value
-            :raises: Value Error if intervals do not hold two and only two values, or if
-            interval startpoint bigger than endpoint.
-            """
-            if from_end < from_start or to_end < to_start:
-                raise ValueError(
-                    "Interval startpoint must be less than or equal to the endpoint."
-                )
-            return to_start + (to_end - to_start) * (value - from_start) / (
-                from_end - from_start
-            )
 
         save_fn = np.savez_compressed if compress else np.savez
 
         temperature_data = self.temperature_data.data.cpu().numpy().astype(np.float16)
         new_temperature_data: list[float] = []
         for temperature in temperature_data:
-            temperature_in_celsius = _convert_value_from_to_interval(
+            temperature_in_celsius = SparseGrid._convert_value_from_to_interval(
                 np.clip(temperature, 0, 1),
                 from_start=0.0,
                 from_end=1.0,
@@ -1907,19 +1913,31 @@ class SparseGrid(nn.Module):
             data["background_data"] = self.background_data.data.cpu().numpy()
         data["basis_type"] = self.basis_type
 
-        save_fn(path, **data)
+        data_temperature = {
+            "min_temperature": min_temperature,
+            "max_temperature": max_temperature,
+        }
+        with open(checkpoint_folder / "temperature_bounds.json", "w") as json_file:
+            json.dump(data_temperature, json_file, indent=4)
+        save_fn(checkpoint_folder / self.model_filename(), **data)
 
     @classmethod
     def load(
         cls,
-        path: str,
+        checkpoint_folder: Path,
         device: Union[torch.device, str] = "cpu",
         is_thermoxels: bool = False,
     ):
         """
         Load from path
         """
-        z = np.load(path)
+        # Get min and max temperature
+        with open(checkpoint_folder / "temperature_bounds.json") as file:
+            data = json.load(file)
+        t_max = data["max_temperature"]
+        t_min = data["min_temperature"]
+
+        z = np.load(checkpoint_folder / cls.model_filename())
         if "data" in z.keys():
             # Compatibility
             all_data = z.f.data
@@ -1929,6 +1947,13 @@ class SparseGrid(nn.Module):
             sh_data = z.f.sh_data
             density_data = z.f.density_data
             temperature_data = z.f.temperature_data
+            SparseGrid._convert_value_from_to_interval(
+                value=temperature_data,
+                from_start=t_min,
+                from_end=t_max,
+                to_start=0.0,
+                to_end=1.0,
+            )
 
         if "background_data" in z:
             background_data = z["background_data"]

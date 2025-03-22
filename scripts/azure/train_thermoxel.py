@@ -88,7 +88,7 @@ def main() -> None:
         "CUDA_LAUNCH_BLOCKING=1 python3.10 "
         "hot_cubes/cli/train_thermoxel_model.py "
         "--data_dir ${{inputs.data}} "
-        "--train_dir ./ "
+        "--model-save-path ./ "
         "--n_epoch "
         + str(params.training_param.n_epoch)
         + " --scene-radius "
