@@ -1,6 +1,5 @@
 import json
 import logging
-import os
 import random
 from os import path
 from pathlib import Path
@@ -66,31 +65,23 @@ class ThermoSceneDataset(DatasetBase):
 
         self.split = split
 
-        self.rgb_img_dir_name = ThermoSceneDataset._look_for_dir(
-            base_path=self.root, candidates=["images", "image", "rgb"]
-        )
-        self.thermal_img_dir_name = ThermoSceneDataset._look_for_dir(
-            base_path=self.root, candidates=["thermal"]
-        )
-        self.pose_dir_name = ThermoSceneDataset._look_for_dir(
-            base_path=self.root, candidates=["poses", "pose"]
-        )
+        self._rgb_img_dir = self.root / "images"
+        self._thermal_img_dir = self.root / "thermal"
+        self._pose_dir = self.root / "pose"
 
         self._rgb_img_files = ThermoSceneDataset._split_files(
-            img_dir_name=self.rgb_img_dir_name, split=self.split
+            img_dir_name=self._rgb_img_dir, split=self.split
         )
         self._thermal_img_files = ThermoSceneDataset._split_files(
-            img_dir_name=self.thermal_img_dir_name, split=self.split
+            img_dir_name=self._thermal_img_dir, split=self.split
         )
 
         all_gt, all_c2w = self.load_images(
-            img_dir_name=self.rgb_img_dir_name,
             img_files=self._rgb_img_files,
             dropout=rgb_dropout,
         )
 
         all_gt_thermal, all_c2w_thermal = self.load_images(
-            img_dir_name=self.thermal_img_dir_name,
             img_files=self._thermal_img_files,
             dropout=thermal_dropout,
         )
@@ -194,12 +185,9 @@ class ThermoSceneDataset(DatasetBase):
         return Path(matching_files[0])
 
     def normalize_by_camera(self, cam_scale_factor: float) -> float:
-        norm_pose_files = sorted(os.listdir(self.pose_dir_name))
+        norm_pose_files = sorted(list(self._pose_dir.iterdir()))
         norm_poses = np.stack(
-            [
-                np.loadtxt((self.pose_dir_name / Path(x))).reshape(-1, 4)
-                for x in norm_pose_files
-            ],
+            [np.loadtxt(x).reshape(-1, 4) for x in norm_pose_files],
             axis=0,
         )
 
@@ -212,8 +200,7 @@ class ThermoSceneDataset(DatasetBase):
 
     def load_images(
         self,
-        img_dir_name: Path,
-        img_files: list[str],
+        img_files: list[Path],
         dropout: float = 0.0,
     ) -> tuple[list[np.ndarray], list[np.ndarray]]:
         """
@@ -225,12 +212,10 @@ class ThermoSceneDataset(DatasetBase):
         all_gt: list[np.ndarray] = []
         all_c2w: list[np.ndarray] = []
 
-        for img_fname in img_files:
-            img_path = img_dir_name / Path(img_fname)
+        for img_path in img_files:
             image = imageio.imread(img_path)
             image = self.load_and_pose(
                 img_path=img_path,
-                img_fname=img_fname,
                 all_c2w=all_c2w,
             )
             torch_image = torch.from_numpy(image)
@@ -245,7 +230,6 @@ class ThermoSceneDataset(DatasetBase):
     def load_and_pose(
         self,
         img_path: Path,
-        img_fname: str,
         all_c2w: list,
     ) -> np.ndarray:
         """
@@ -259,8 +243,8 @@ class ThermoSceneDataset(DatasetBase):
         if len(image.shape) == 2 or (len(image.shape) == 3 and image.shape[2] == 1):
             image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
 
-        pose_fname = path.splitext(img_fname)[0] + ".txt"
-        pose_path = path.join(self.pose_dir_name, pose_fname)
+        pose_fname = img_path.stem + ".txt"
+        pose_path = path.join(self._pose_dir, pose_fname)
         cam_mtx = np.loadtxt(pose_path).reshape(-1, 4)
         if len(cam_mtx) == 3:
             bottom = np.ndarray([[0.0, 0.0, 0.0, 1.0]])
@@ -271,14 +255,14 @@ class ThermoSceneDataset(DatasetBase):
         return image
 
     @staticmethod
-    def _split_files(img_dir_name: Path, split: str) -> tuple[list[str], list[str]]:
+    def _split_files(img_dir_name: Path, split: str) -> list[Path]:
         """
         This function split the images names according to the train/test/validation
         scenario
         :returns: list of rgb and thermal names for the split case
         """
 
-        orig_img_files = os.listdir(img_dir_name)
+        orig_img_files = sorted(img_dir_name.iterdir())
 
         # Access image names
         if split == "train" or split == "test_train" or split == "val":
@@ -302,19 +286,21 @@ class ThermoSceneDataset(DatasetBase):
         return img_files
 
     @staticmethod
-    def _get_data_files(orig_img_files: list[str], prefix: str) -> list[str]:
-        return [x for x in orig_img_files if x.startswith(prefix)]
+    def _get_data_files(orig_img_files: list[Path], prefix: str) -> list[Path]:
+        return [x for x in orig_img_files if x.name.startswith(prefix)]
 
     @staticmethod
     def _get_eval_files(
-        orig_img_files: list[str],
-    ) -> list[str]:
+        orig_img_files: list[Path],
+    ) -> list[Path]:
         return ThermoSceneDataset._get_data_files(
             orig_img_files=orig_img_files, prefix="frame_eval_"
         )
 
     @staticmethod
-    def _get_train_val_files(orig_img_files: list[str]) -> tuple[list[str], list[str]]:
+    def _get_train_val_files(
+        orig_img_files: list[Path],
+    ) -> tuple[list[Path], list[Path]]:
         total_files = ThermoSceneDataset._get_data_files(
             orig_img_files=orig_img_files, prefix="frame_train_"
         )
@@ -337,15 +323,6 @@ class ThermoSceneDataset(DatasetBase):
         height_to_keep = int(image.shape[0] * 0.93)
         cropped_image = image[:height_to_keep]
         return cropped_image
-
-    @staticmethod
-    def _look_for_dir(base_path: Path, candidates: list[str]) -> Path:
-        for cand in candidates:
-            if path.isdir(path.join(base_path, cand)):
-                return base_path / Path(cand)
-        assert False, (
-            "None of " + str(candidates) + " found in data directory" + str(base_path)
-        )
 
     def _generate_rays(self, dirs: torch.Tensor, factor: float = 1.0) -> ThermalRays:
         rgb_rays = super()._generate_rays(dirs=dirs, factor=factor)
