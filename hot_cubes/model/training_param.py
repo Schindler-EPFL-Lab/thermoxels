@@ -1,4 +1,8 @@
-from dataclasses import dataclass
+import logging
+from dataclasses import asdict, dataclass
+from pathlib import Path
+
+import mlflow
 
 
 @dataclass
@@ -13,7 +17,7 @@ class TrainingParam:
     data_dir: str | None = None
     render_dir: str = "./"
     config_file: str | None = None
-    train_dir: str = "./"
+    model_save_path: Path = Path("./")
     scene_name: str | None = None
 
     # General settings
@@ -32,7 +36,7 @@ class TrainingParam:
     scale: float = 1.0
     seq_id: int = 1000
     epoch_size: int = 12800
-    scene_radius: float = 1.7
+    scene_radius: float = 1.5
 
     # Basis function settings
     basis_type: str = "sh"
@@ -113,11 +117,10 @@ class TrainingParam:
     max_grid_elements: int = 44000000
     tune_mode: bool = False
     render_circle: bool = False
-    tune_nosave: bool = False
 
     # Losses and regularization
     lambda_tv: float = 0.005
-    tv_sparsity: float = 0.01
+    tv_sparsity: float = 0.25
     tv_logalpha: bool = False
     lambda_tv_sh: float = 5e-2
     lambda_tv_temp: float = 1e-3
@@ -139,8 +142,8 @@ class TrainingParam:
     lr_decay: bool = True
     n_train: int | None = None
     nosphereinit: bool = True
-    tv_sh_sparsity: float = 0.01
-    tv_temp_sparsity: float = 0.01
+    tv_sh_sparsity: float = 0.25
+    tv_temp_sparsity: float = 0.1
     t_loss: float = 0.0
     t_surface_loss: float = 0.0
     l1_loss: float = 0.0
@@ -173,6 +176,23 @@ class TrainingParam:
     def __post_init__(self):
         if self.scene_name is None and self.data_dir is None:
             raise ValueError("Either scene_name or data_dir must be provided")
+        if self.lr_sigma_final >= self.lr_sigma:
+            raise RuntimeError("lr_sigma must be >= lr_sigma_final")
+        if self.lr_sh_final >= self.lr_sh:
+            raise RuntimeError("lr_sh must be >= lr_sh_final")
+        if self.lr_temperature_final >= self.lr_temperature:
+            raise RuntimeError("lr_temperature must be >= lr_temperature_final")
+        if self.freeze_rgb_after > self.n_epoch:
+            logging.warning("can only freeze after RGB training")
+
+        for key, value in asdict(self).items():
+            if value is not None:
+                try:  # Take in account that some values might already have been logged
+                    mlflow.log_param(key, value)
+                except mlflow.exceptions.RestException:
+                    pass
+
+        Path(self.model_save_path).mkdir(parents=True, exist_ok=True)
 
     def update_from_dict(self, updates: dict) -> None:
         """

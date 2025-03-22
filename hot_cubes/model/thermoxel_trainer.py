@@ -12,18 +12,13 @@ from tqdm import tqdm
 
 import hot_cubes.svox2_temperature as svox2
 from hot_cubes.model.training_param import TrainingParam
-from hot_cubes.renderer_evaluator.model_evaluator import Evaluator
-from hot_cubes.renderer_evaluator.render_param import RenderParam
 from hot_cubes.renderer_evaluator.thermal_evaluation_metrics import (
     compute_psnr,
     compute_thermal_metric_maps,
 )
 from plenoxels.opt.util import config_util
-from plenoxels.opt.util.dataset import datasets
 from plenoxels.opt.util.dataset_base import DatasetBase
 from plenoxels.opt.util.util import get_expon_lr_func, viridis_cmap
-
-device = "cuda" if torch.cuda.is_available() else "cpu"
 
 
 class ThermoxelTrainer:
@@ -35,6 +30,7 @@ class ThermoxelTrainer:
         min_temperature: float,
         max_temperature: float,
     ) -> None:
+        self._device = "cuda" if torch.cuda.is_available() else "cpu"
         self._param = param
         self.dataset = dataset
         self.dataset_val = dataset_val
@@ -50,7 +46,7 @@ class ThermoxelTrainer:
             radius=self._param.scene_radius,
             basis_dim=self._param.sh_dim,
             use_z_order=True,
-            device=device,
+            device=self._device,
             basis_resolution=self._param.basis_reso,
             basis_type=svox2.__dict__["BASIS_TYPE_" + self._param.basis_type.upper()],
             mlp_posenc_size=self._param.mlp_posenc_size,
@@ -97,7 +93,24 @@ class ThermoxelTrainer:
             self._param.lr_temperature_decay_steps,
         )
 
-        self.ckpt_path = Path(self._param.train_dir) / Path("ckpt.npz")
+    @property
+    def max_temperature(self) -> float:
+        return self._max_temperature
+
+    @property
+    def min_temperature(self) -> float:
+        return self._min_temperature
+
+    def save_model(self, to_folder: Path | None = None) -> None:
+        if to_folder is None:
+            to_folder = self._param.model_save_path
+
+        self.grid.save(
+            to_folder / "ckpt.npz",
+            max_temperature=self.max_temperature,
+            min_temperature=self.min_temperature,
+        )
+        mlflow.log_artifact(str(to_folder / "ckpt.npz"))
 
     def optimize(
         self,
@@ -121,7 +134,7 @@ class ThermoxelTrainer:
 
         resample_cameras = [
             svox2.Camera(
-                c2w.to(device=device),
+                c2w.to(device=self._device),
                 self.dataset.intrins.get("fx", i),
                 self.dataset.intrins.get("fy", i),
                 self.dataset.intrins.get("cx", i),
@@ -156,11 +169,10 @@ class ThermoxelTrainer:
                 and (global_step_id_base + 1) % max(factor, self._param.save_every) == 0
                 and not self._param.tune_mode
             ):
-                logging.info("Saving", self.ckpt_path)
-                self.grid.save(
-                    self.ckpt_path,
-                    max_temperature=self._max_temperature,
-                    min_temperature=self._min_temperature,
+                logging.info("Saving the model")
+                self.save_model(
+                    to_folder=self._param.model_save_path
+                    / ("checkpoints" + f"/{global_step_id_base}")
                 )
 
             if (global_step_id_base - last_upsamp_step) < self._param.upsamp_every:
@@ -223,14 +235,6 @@ class ThermoxelTrainer:
         logging.info("* Final eval and save ")
 
         self.eval_step()
-        if not self._param.tune_nosave:
-            self.grid.save(
-                self.ckpt_path,
-                max_temperature=self._max_temperature,
-                min_temperature=self._min_temperature,
-            )
-            mlflow.log_artifact(self.ckpt_path)
-            self.test_step()
 
     def train_step(
         self,
@@ -465,7 +469,7 @@ class ThermoxelTrainer:
             }
             img_ids = range(0, self.dataset_val.n_images, 1)
             for i, img_id in tqdm(enumerate(img_ids), total=len(img_ids)):
-                c2w = self.dataset_val.c2w[img_id].to(device=device)
+                c2w = self.dataset_val.c2w[img_id].to(device=self._device)
                 cam = svox2.Camera(
                     c2w,
                     self.dataset_val.intrins.get("fx", img_id),
@@ -591,36 +595,6 @@ class ThermoxelTrainer:
                 mlflow.log_metric(stat_name, stats_val[stat_name])
 
             logging.info("eval stats:", stats_val)
-
-    def test_step(self) -> None:
-        render_param = RenderParam(
-            ckpt=self.ckpt_path,
-            data_dir=self._param.data_dir,
-            render_dir="./",
-            nobg=False,
-            dataset_type="auto",
-            train=True,
-            is_thermoxels=self._param.is_thermoxels,
-        )
-        dataset_test = datasets[self._param.dataset_type](
-            self._param.data_dir,
-            split="test",
-            **{
-                "dataset_type": self._param.dataset_type,
-                "seq_id": self._param.seq_id,
-                "epoch_size": self._param.epoch_size,  # batch_size
-                "white_bkgd": self._param.white_bkgd,
-                "hold_every": 8,
-                "normalize_by_bbox": self._param.normalize_by_bbox,
-                "data_bbox_scale": self._param.data_bbox_scale,
-                "cam_scale_factor": self._param.cam_scale_factor,
-                "normalize_by_camera": self._param.normalize_by_camera,
-                "permutation": False,
-            },
-        )
-
-        evaluator = Evaluator(param=render_param, dataset=dataset_test)
-        evaluator.save_metric(log_only=True)
 
     @staticmethod
     def process_rendered_images(

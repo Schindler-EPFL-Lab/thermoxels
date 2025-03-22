@@ -1,7 +1,5 @@
 import json
-import logging
 import sys
-from dataclasses import asdict
 from datetime import datetime
 from pathlib import Path
 
@@ -13,37 +11,15 @@ import tyro
 sys.path.append(".")
 sys.path.append("./hot_cubes")
 
-
 from hot_cubes.datasets.datasets_utils.colmap_json_to_txt import (
     convert_colmap_json_to_txt,
 )
 from hot_cubes.model.thermoxel_trainer import ThermoxelTrainer  # noqa: E402
 from hot_cubes.model.training_param import TrainingParam  # noqa: E402
+from hot_cubes.renderer_evaluator.model_evaluator import Evaluator
+from hot_cubes.renderer_evaluator.render_param import RenderParam
 from plenoxels.opt.util import config_util  # noqa: E402
 from plenoxels.opt.util.dataset import datasets  # noqa: E402
-
-
-def get_arg() -> TrainingParam:
-    param = tyro.cli(TrainingParam)
-
-    if param.lr_sigma_final >= param.lr_sigma:
-        raise RuntimeError("lr_sigma must be >= lr_sigma_final")
-    if param.lr_sh_final >= param.lr_sh:
-        raise RuntimeError("lr_sh must be >= lr_sh_final")
-    if param.lr_temperature_final >= param.lr_temperature:
-        raise RuntimeError("lr_temperature must be >= lr_temperature_final")
-    if param.freeze_rgb_after > param.n_epoch:
-        logging.warning("can only freeze after RGB training")
-
-    for key, value in asdict(param).items():
-        if value is not None:
-            try:  # Take in account that some values might already have been logged
-                mlflow.log_param(key, value)
-            except mlflow.exceptions.RestException:
-                pass
-
-    Path(param.train_dir).mkdir(parents=True, exist_ok=True)
-    return param
 
 
 def main():
@@ -53,7 +29,8 @@ def main():
 
     torch.manual_seed(20200823)
     np.random.seed(20200823)
-    param = get_arg()
+    param = tyro.cli(TrainingParam)
+    assert param.data_dir is not None
     factor = 1
 
     data_dir_path = Path(param.data_dir)
@@ -95,6 +72,39 @@ def main():
     )
 
     trainer.optimize(factor=factor)
+
+    trainer.save_model()
+
+    # Evaluate the model
+    assert param.data_dir is not None
+    render_param = RenderParam(
+        model_path=param.model_save_path,
+        data_dir=param.data_dir,
+        render_dir="./",
+        nobg=False,
+        dataset_type="auto",
+        train=True,
+        is_thermoxels=param.is_thermoxels,
+    )
+    dataset_test = datasets[param.dataset_type](
+        param.data_dir,
+        split="test",
+        **{
+            "dataset_type": param.dataset_type,
+            "seq_id": param.seq_id,
+            "epoch_size": param.epoch_size,  # batch_size
+            "white_bkgd": param.white_bkgd,
+            "hold_every": 8,
+            "normalize_by_bbox": param.normalize_by_bbox,
+            "data_bbox_scale": param.data_bbox_scale,
+            "cam_scale_factor": param.cam_scale_factor,
+            "normalize_by_camera": param.normalize_by_camera,
+            "permutation": False,
+        },
+    )
+
+    evaluator = Evaluator(param=render_param, dataset=dataset_test)
+    evaluator.save_metric(log_only=True)
 
     mlflow.log_metric("execution time", (datetime.now() - start_time).total_seconds())
 
