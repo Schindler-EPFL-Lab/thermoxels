@@ -12,11 +12,11 @@ from skimage.metrics import structural_similarity
 
 import hot_cubes.svox2_temperature as svox2
 from hot_cubes.datasets.thermo_scene_dataset import ThermoSceneDataset
+from hot_cubes.model.thermoxel_trainer import ThermoxelTrainer
 from hot_cubes.renderer_evaluator.render_param import RenderParam
 from hot_cubes.renderer_evaluator.thermal_evaluation_metrics import (
     compute_thermal_metrics,
 )
-from plenoxels.opt.util.dataset_base import DatasetBase
 
 
 class Evaluator:
@@ -44,6 +44,7 @@ class Evaluator:
             self.lpips_list: list[float] = []
 
         self._grid = svox2.SparseGrid.load(
+            self._param.model_path,
             self._param.ckpt,
             device=self._device,
             is_thermoxels=self._param.is_thermoxels,
@@ -82,7 +83,6 @@ class Evaluator:
     def compute_mse_psnr_ssim(
         im: torch.Tensor, im_gt: torch.Tensor
     ) -> tuple[float, float, float]:
-
         mse = (im - im_gt) ** 2
         mse_num: float = mse.mean().item()
         psnr = -10.0 * math.log10(mse_num)
@@ -101,18 +101,16 @@ class Evaluator:
         ).item()
         return lpips
 
-    def _compute_metrics(self, dataset: DatasetBase) -> dict[str, float]:
+    def _compute_metrics(self, dataset: ThermoSceneDataset) -> None:
         # NOTE: no_grad enables the fast image-level rendering kernel
         # for cuvol backend only
         # other backends will manually generate rays per frame (slow)
         with torch.no_grad():
-
             img_eval_interval = max(dataset.n_images // self._param.n_eval, 1)
             c2ws = dataset.c2w.to(device=self._device)
             video_frames = []
 
             for img_id in range(0, dataset.n_images, img_eval_interval):
-
                 dset_h, dset_w = dataset.get_image_size(img_id)
                 w = (
                     dset_w
@@ -145,7 +143,9 @@ class Evaluator:
                     # This swaps outputs to train Plenoxels on thermal images :
                     im_thermal = im.mean(axis=2).unsqueeze(-1)
 
-                im, im_thermal = Evaluator.process_rendered_images(im, im_thermal)
+                im, im_thermal = ThermoxelTrainer.process_rendered_images(
+                    im, im_thermal
+                )
                 im_gt = dataset.gt[img_id].cpu()
 
                 im_gt_thermal = dataset.gt_thermal[img_id].cpu().mean(axis=2)
@@ -249,56 +249,64 @@ class Evaluator:
             logging.info(img_id, "RGB LPIPS", lpips_i)
 
     def _compute_and_log_average_metrics(self) -> None:
-        avg_psnr, std_psnr = statistics.fmean(self.psnr_list), statistics.stdev(
-            self.psnr_list
+        avg_psnr, std_psnr = (
+            statistics.fmean(self.psnr_list),
+            statistics.stdev(self.psnr_list),
         )
         mlflow.log_metric("Mean RGB PSNR on test", avg_psnr)
         mlflow.log_metric("STD RGB PSNR on test", std_psnr)
 
-        avg_ssim, std_ssim = statistics.fmean(self.ssim_list), statistics.stdev(
-            self.ssim_list
+        avg_ssim, std_ssim = (
+            statistics.fmean(self.ssim_list),
+            statistics.stdev(self.ssim_list),
         )
         mlflow.log_metric("Mean RGB SSIM on test", avg_ssim)
         mlflow.log_metric("STD RGB SSIM on test", std_ssim)
 
-        avg_thermal_psnr, std_thermal_psnr = statistics.fmean(
-            self.thermal_psnr_list
-        ), statistics.stdev(self.thermal_psnr_list)
+        avg_thermal_psnr, std_thermal_psnr = (
+            statistics.fmean(self.thermal_psnr_list),
+            statistics.stdev(self.thermal_psnr_list),
+        )
 
         mlflow.log_metric("Mean Thermal PSNR on test", avg_thermal_psnr)
         mlflow.log_metric("STD Thermal PSNR on test", std_thermal_psnr)
 
-        avg_hssim, std_hssim = statistics.fmean(self.hssim_list), statistics.stdev(
-            self.hssim_list
+        avg_hssim, std_hssim = (
+            statistics.fmean(self.hssim_list),
+            statistics.stdev(self.hssim_list),
         )
 
         mlflow.log_metric("Mean Thermal HSSIM on test", avg_hssim)
         mlflow.log_metric("STD Thermal HSSIM on test", std_hssim)
 
-        avg_ssim_thermal, std_ssim_thermal = statistics.fmean(
-            self.thermal_ssim_list
-        ), statistics.stdev(self.thermal_ssim_list)
+        avg_ssim_thermal, std_ssim_thermal = (
+            statistics.fmean(self.thermal_ssim_list),
+            statistics.stdev(self.thermal_ssim_list),
+        )
 
         mlflow.log_metric("Mean tSSIM on test", avg_ssim_thermal)
         mlflow.log_metric("STD tSSIM on test", std_ssim_thermal)
 
-        avg_thermal_mae, std_thermal_mae = statistics.fmean(
-            self.thermal_mae_list
-        ), statistics.stdev(self.thermal_mae_list)
+        avg_thermal_mae, std_thermal_mae = (
+            statistics.fmean(self.thermal_mae_list),
+            statistics.stdev(self.thermal_mae_list),
+        )
 
         mlflow.log_metric("Mean Thermal MAE on test", avg_thermal_mae)
         mlflow.log_metric("STD Thermal MAE on test", std_thermal_mae)
 
-        avg_thermal_mae_roi, std_thermal_mae_roi = statistics.fmean(
-            self.thermal_mae_roi_list
-        ), statistics.stdev(self.thermal_mae_roi_list)
+        avg_thermal_mae_roi, std_thermal_mae_roi = (
+            statistics.fmean(self.thermal_mae_roi_list),
+            statistics.stdev(self.thermal_mae_roi_list),
+        )
 
         mlflow.log_metric("Mean Thermal MAE roi on test", avg_thermal_mae_roi)
         mlflow.log_metric("STD Thermal MAE roi on test", std_thermal_mae_roi)
 
         if self._param.lpips:
-            avg_lpips, std_lpips = statistics.fmean(self.lpips_list), statistics.stdev(
-                self.lpips_list
+            avg_lpips, std_lpips = (
+                statistics.fmean(self.lpips_list),
+                statistics.stdev(self.lpips_list),
             )
             mlflow.log_metric("Mean RGB LPIPS on test", avg_lpips)
             mlflow.log_metric("STD RGB LPIPS on test", std_lpips)
@@ -330,16 +338,6 @@ class Evaluator:
         opt.last_sample_opaque = last_sample_opaque
         opt.near_clip = near_clip
         opt.use_spheric_clip = use_spheric_clip
-
-    @staticmethod
-    def process_rendered_images(
-        rgb_pred: torch.tensor, thermal_pred: torch.tensor
-    ) -> tuple[torch.tensor, torch.tensor]:
-        rgb_pred = rgb_pred.clamp(0.0, 1.0)
-        thermal_pred = thermal_pred.clamp(0.0, 1.0)
-        thermal_pred = torch.squeeze(thermal_pred, dim=2)
-
-        return rgb_pred.cpu(), thermal_pred.cpu()
 
     @staticmethod
     def log_concat_image(im_1: np.ndarray, im_2: np.ndarray, name: str) -> None:

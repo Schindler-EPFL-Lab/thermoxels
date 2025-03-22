@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from pathlib import Path
 
 
 @dataclass
@@ -8,7 +9,7 @@ class RenderParam:
     Plenoxel-based models.
     """
 
-    ckpt: str  # ckpt path, should end with ckpt.npz
+    model_path: Path  # Path to folder containing model
     data_dir: str
     render_dir: str = "./"
     config_file: str | None = None
@@ -47,3 +48,7 @@ class RenderParam:
     is_thermoxels: bool = True
     """If true Evaluator will evaluate thermoxels, if false, evaluate plenoxel with
     thermal images only"""
+
+    @property
+    def ckpt(self) -> Path:
+        return self.model_path / "ckpt.npz"
