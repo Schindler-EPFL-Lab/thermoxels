@@ -534,7 +534,7 @@ class ThermoxelTrainer:
                 if not to_log:
                     continue
 
-                output_folder = self._param.model_save_path / "images"
+                output_folder = Path(self._param.model_save_path.stem) / "images"
                 ThermoxelTrainer._log_concat_image(
                     rgb_gt_val.numpy(),
                     rgb_pred_val,

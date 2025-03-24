@@ -16,6 +16,7 @@ from hot_cubes.svox2_temperature import SparseGrid
 
 def convert_to_hex8_mesh(
     ckpt_path: Path,
+    model_name_prefix="",
     density_threshold: float = 22.0,
 ) -> None:
     """
@@ -95,9 +96,10 @@ def convert_to_hex8_mesh(
                 cells.append(cell)
 
     # Export mesh using meshio
-    output_path = Path(
-        ckpt_path, ckpt_path.stem + "_" + str(density_threshold) + ".vtu"
+    mesh_name = (
+        model_name_prefix + ckpt_path.stem + "_" + str(density_threshold) + ".vtu"
     )
+    output_path = Path(ckpt_path, mesh_name)
 
     meshio_points = np.array(points, dtype=float)
     meshio_cells = [("hexahedron", np.array(cells))]

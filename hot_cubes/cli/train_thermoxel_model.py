@@ -1,4 +1,5 @@
 import json
+import shutil
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -108,7 +109,7 @@ def train(param: TrainingParam) -> None:
     )
 
     evaluator = Evaluator(param=render_param, dataset=dataset_test)
-    evaluator.save_metric(log_only=True)
+    evaluator.save_metric(log_only=True, prefix=param.model_save_path.stem)
 
     mlflow.log_metric("execution time", (datetime.now() - start_time).total_seconds())
 
@@ -139,6 +140,8 @@ def main() -> None:
         param.is_thermoxels = False
         param.model_save_path = original_path / "plenoxel_t"
         train(param)
+
+    shutil.rmtree(new_dataset)
 
 
 if __name__ == "__main__":

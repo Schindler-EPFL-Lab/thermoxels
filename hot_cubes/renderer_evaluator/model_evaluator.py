@@ -184,7 +184,7 @@ class Evaluator:
                 )
                 mlflow.log_artifact(vid_path, artifact_path="videos")
 
-    def save_metric(self, log_only: bool = False) -> None:
+    def save_metric(self, log_only: bool = False, prefix: str = "") -> None:
         all_metrics = {
             "RGB psnr": self.psnr_list,
             "RGB ssim": self.ssim_list,
@@ -195,7 +195,7 @@ class Evaluator:
             "Thermal mae_roi": self.thermal_mae_roi_list,
             "Thermal hssim": self.hssim_list,
         }
-        mlflow.log_dict(all_metrics, "metrics")
+        mlflow.log_dict(all_metrics, str(self._param.metric_path / "metrics.json"))
         if log_only:
             return
         with open(self._param.metric_path / "test_metric.json", "w") as file:

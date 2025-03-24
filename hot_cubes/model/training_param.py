@@ -14,11 +14,11 @@ class TrainingParam:
     """
 
     # Directory settings
+    scene_name: str
     data_dir: str | None = None
     render_dir: str = "./"
     config_file: str | None = None
     model_save_path: Path = Path("./outputs")
-    scene_name: str | None = None
 
     # General settings
     # reso: str = "[[128, 128, 128], [256, 256, 256], [512, 512, 512], [640, 640, 640], [768, 768, 768]]"
