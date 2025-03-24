@@ -17,10 +17,11 @@ class TrainingParam:
     data_dir: str | None = None
     render_dir: str = "./"
     config_file: str | None = None
-    model_save_path: Path = Path("./")
+    model_save_path: Path = Path("./outputs")
     scene_name: str | None = None
 
     # General settings
+    # reso: str = "[[128, 128, 128], [256, 256, 256], [512, 512, 512], [640, 640, 640], [768, 768, 768]]"
     reso: str = "[[128, 128, 128], [256, 256, 256], [512, 512, 512], [640, 640, 640]]"
     image_type: str = "rgb"
     upsamp_every: int = 2  # in epoch
@@ -50,7 +51,7 @@ class TrainingParam:
     background_reso: int = 1024
 
     # Optimization settings
-    n_epoch: int = 15
+    n_epoch: int = 6
     freeze_rgb_after: int = 10
     n_iters: int = 102400
     batch_size: int = 5000
@@ -144,7 +145,7 @@ class TrainingParam:
     nosphereinit: bool = True
     tv_sh_sparsity: float = 0.25
     tv_temp_sparsity: float = 0.1
-    t_loss: float = 0.0
+    t_loss: float = 0.001
     t_surface_loss: float = 0.0
     l1_loss: float = 0.0
 

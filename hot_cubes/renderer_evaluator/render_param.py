@@ -11,7 +11,8 @@ class RenderParam:
 
     model_path: Path  # Path to folder containing model
     data_dir: str
-    render_dir: str = "./"
+    render_dir: Path = Path("./")
+    metric_path: Path = Path("outputs/")
     config_file: str | None = None
     n_eval: int = 100000
     train: bool = False

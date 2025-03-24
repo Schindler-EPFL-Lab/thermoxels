@@ -86,66 +86,64 @@ def main() -> None:
         "thermoxel_model": Output(type=AssetTypes.CUSTOM_MODEL),  # type: ignore
     }
 
-    for radius in [6]:
-        for tv_sparsity in [0.1]:
-            for tv_temp_sparsity in [0.1]:
-                for tv_sh_sparsity in [0.1]:
-                    job_name = (
-                        "train-thermoxel-"
-                        + params.training_param.scene_name
-                        + "-"
-                        + datetime.now().strftime("%d-%m-%Y-%H%M%S")
-                    )
+    job_name = (
+        "train-thermoxel-"
+        + params.training_param.scene_name
+        + "-"
+        + datetime.now().strftime("%d-%m-%Y-%H%M%S")
+    )
 
-                    cmd = (
-                        "CUDA_LAUNCH_BLOCKING=1 python3.10 "
-                        "hot_cubes/cli/train_thermoxel_model.py "
-                        "--data_dir ${{inputs.data}} "
-                        "--model-save-path ${{outputs.thermoxel_model}} "
-                        "--n_epoch "
-                        + str(params.training_param.n_epoch)
-                        + " --scene-radius "
-                        + str(radius)
-                        + " --tv_sparsity "
-                        + str(tv_sparsity)
-                        + " --tv_sh_sparsity "
-                        + str(tv_sh_sparsity)
-                        + " "
-                        "--tv_temp_sparsity " + str(tv_temp_sparsity) + " "
-                        "--save_every 0 "
-                        "--eval_every 0 "
-                        "--log_mse_image "
-                        "--log_mae_image "
-                        "--scene-name " + params.training_param.scene_name
-                    )
-                    if not params.training_param.is_thermoxels:
-                        cmd += " --no-is-thermoxels"
-                        job_name = (
-                            "train-plenoxel-t-"
-                            + params.training_param.scene_name
-                            + "-"
-                            + datetime.now().strftime("%d-%m-%Y-%H%M%S")
-                        )
-                    if params.environment_version.isnumeric():
-                        env_version_string = ":" + params.environment_version
-                    else:
-                        env_version_string = "@" + params.environment_version
+    cmd = (
+        "CUDA_LAUNCH_BLOCKING=1 python3.10 "
+        "hot_cubes/cli/train_thermoxel_model.py "
+        "--data_dir ${{inputs.data}} "
+        "--model-save-path ${{outputs.thermoxel_model}} "
+        "--n-epoch "
+        + str(params.training_param.n_epoch)
+        + " --t-loss "
+        + str(params.training_param.t_loss)
+        + " --scene-radius "
+        + str(params.training_param.scene_radius)
+        + " --tv_sparsity "
+        + str(params.training_param.tv_sparsity)
+        + " --tv_sh_sparsity "
+        + str(params.training_param.tv_sh_sparsity)
+        + " "
+        "--tv_temp_sparsity " + str(params.training_param.tv_temp_sparsity) + " "
+        "--save_every 0 "
+        "--eval_every 0 "
+        "--log_mse_image "
+        "--log_mae_image "
+        "--scene-name " + params.training_param.scene_name
+    )
+    if not params.training_param.is_thermoxels:
+        cmd += " --no-is-thermoxels"
+        job_name = (
+            "train-plenoxel-t-"
+            + params.training_param.scene_name
+            + "-"
+            + datetime.now().strftime("%d-%m-%Y-%H%M%S")
+        )
+    if params.environment_version.isnumeric():
+        env_version_string = ":" + params.environment_version
+    else:
+        env_version_string = "@" + params.environment_version
 
-                    job = command(
-                        inputs=job_inputs,
-                        outputs=job_outputs,
-                        code=".",
-                        environment=params.environment + env_version_string,
-                        compute="nerf-a100-2",
-                        command=cmd,
-                        experiment_name=params.experiment_name,
-                        display_name=job_name,
-                        name=job_name,
-                    )
+    job = command(
+        inputs=job_inputs,
+        outputs=job_outputs,
+        code=".",
+        environment=params.environment + env_version_string,
+        compute="voxel-a100",
+        command=cmd,
+        experiment_name=params.experiment_name,
+        display_name=job_name,
+        name=job_name,
+    )
 
-                    returned_job = ml_client.jobs.create_or_update(job)
+    returned_job = ml_client.jobs.create_or_update(job)
 
-                    assert returned_job.services is not None
+    assert returned_job.services is not None
 
 
 if __name__ == "__main__":

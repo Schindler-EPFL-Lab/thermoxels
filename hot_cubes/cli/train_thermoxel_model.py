@@ -14,6 +14,7 @@ sys.path.append("./hot_cubes")
 from hot_cubes.datasets.datasets_utils.colmap_json_to_txt import (
     convert_colmap_json_to_txt,
 )
+from hot_cubes.grid_export.npy_to_mesh import convert_to_hex8_mesh
 from hot_cubes.model.thermoxel_trainer import ThermoxelTrainer  # noqa: E402
 from hot_cubes.model.training_param import TrainingParam  # noqa: E402
 from hot_cubes.renderer_evaluator.model_evaluator import Evaluator
@@ -22,22 +23,12 @@ from plenoxels.opt.util import config_util  # noqa: E402
 from plenoxels.opt.util.dataset import datasets  # noqa: E402
 
 
-def main():
+def train(param: TrainingParam) -> None:
     start_time = datetime.now()
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    torch.manual_seed(20200823)
-    np.random.seed(20200823)
-    param = tyro.cli(TrainingParam)
-    assert param.data_dir is not None
     factor = 1
-
-    data_dir_path = Path(param.data_dir)
-    # Transform our nerfstudio dataset into a compatible dataset
-    new_dataset = Path("./outputs/dataset")
-    convert_colmap_json_to_txt(dataset_path=data_dir_path, save_to=new_dataset)
-    param.data_dir = str(new_dataset)
 
     dataset = datasets[param.dataset_type](
         param.data_dir,
@@ -72,23 +63,32 @@ def main():
     )
 
     trainer.optimize(factor=factor)
+    trainer.eval_step()
 
-    trainer.save_model(to_folder=param.model_save_path / "kelvin")
     trainer.save_model(
-        to_folder=param.model_save_path / "celsius",
+        to_folder=param.model_save_path / (str(param.model_save_path.stem) + "_kelvin")
+    )
+    trainer.save_model(
+        to_folder=param.model_save_path
+        / (str(param.model_save_path.stem) + "_celsius"),
         new_scale="Celsius",
+    )
+    convert_to_hex8_mesh(
+        param.model_save_path / (str(param.model_save_path.stem) + "_celsius")
     )
 
     # Evaluate the model
     assert param.data_dir is not None
     render_param = RenderParam(
-        model_path=param.model_save_path / "kelvin",
+        model_path=param.model_save_path
+        / (str(param.model_save_path.stem) + "_kelvin"),
         data_dir=param.data_dir,
-        render_dir="./",
+        render_dir=Path("outputs") / param.model_save_path.stem,
         nobg=False,
         dataset_type="auto",
         train=True,
         is_thermoxels=param.is_thermoxels,
+        metric_path=param.model_save_path,
     )
     dataset_test = datasets[param.dataset_type](
         param.data_dir,
@@ -111,6 +111,34 @@ def main():
     evaluator.save_metric(log_only=True)
 
     mlflow.log_metric("execution time", (datetime.now() - start_time).total_seconds())
+
+
+def main() -> None:
+    param = tyro.cli(TrainingParam)
+
+    torch.manual_seed(20200823)
+    np.random.seed(20200823)
+
+    assert param.data_dir is not None
+    data_dir_path = Path(param.data_dir)
+    # Transform our nerfstudio dataset into a compatible dataset
+    new_dataset = Path("./outputs/dataset")
+    convert_colmap_json_to_txt(dataset_path=data_dir_path, save_to=new_dataset)
+    param.data_dir = str(new_dataset)
+
+    original_path = param.model_save_path
+    param.model_save_path = original_path / "thermoxel"
+    train(param)
+
+    if param.t_loss != 0:
+        param.t_loss = 0
+        param.model_save_path = original_path / "no_t_loss"
+        train(param)
+
+    if param.is_thermoxels:
+        param.is_thermoxels = False
+        param.model_save_path = original_path / "plenoxel_t"
+        train(param)
 
 
 if __name__ == "__main__":

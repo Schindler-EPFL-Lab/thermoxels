@@ -236,10 +236,6 @@ class ThermoxelTrainer:
                 self.dataset.gen_rays(factor=factor)
                 self.dataset.shuffle_rays()
 
-        logging.info("* Final eval and save ")
-
-        self.eval_step()
-
     def train_step(
         self,
         global_step_id_base: int,
@@ -538,37 +534,40 @@ class ThermoxelTrainer:
                 if not to_log:
                     continue
 
+                output_folder = self._param.model_save_path / "images"
                 ThermoxelTrainer._log_concat_image(
                     rgb_gt_val.numpy(),
                     rgb_pred_val,
-                    f"outputs/val_image_{img_id:04d}.png",
+                    f"{output_folder}/val_image_{img_id:04d}.png",
                 )
 
                 ThermoxelTrainer._log_concat_image(
                     thermal_gt_val.cpu(),
                     thermal_pred_val,
-                    f"outputs/val_thermal_image_{img_id:04d}.png",
+                    f"{output_folder}/val_thermal_image_{img_id:04d}.png",
                 )
 
                 if self._param.log_mse_image:
                     mse_rgb_img = all_mses_rgb / all_mses_rgb.max()
                     mlflow.log_image(
                         np.array(mse_rgb_img),
-                        f"outputs/val_mse_image" f"_{img_id:04d}.png",
+                        f"{output_folder}/val_mse_image" f"_{img_id:04d}.png",
                     )
 
                     mse_thermal = thermal_mse_map / thermal_mse_map.max()
 
                     mlflow.log_image(
                         np.array(mse_thermal),
-                        f"outputs/val_mse_thermal_image" f"" f"_{img_id:04d}.png",
+                        f"{output_folder}/val_mse_thermal_image"
+                        f""
+                        f"_{img_id:04d}.png",
                     )
                 if self._param.log_mae_image:
                     mae_map = thermal_mae_map / thermal_mae_map.max()
 
                     mlflow.log_image(
                         np.array(mae_map.unsqueeze(-1)),
-                        f"outputs/val_mae_thermal_image_{img_id:04d}.png",
+                        f"{output_folder}/val_mae_thermal_image_{img_id:04d}.png",
                     )
                 if self._param.log_depth_map:
                     depth_img = self.grid.volume_render_depth_image(
@@ -580,7 +579,7 @@ class ThermoxelTrainer:
                     ThermoxelTrainer._log_concat_image(
                         rgb_gt_val.cpu().numpy(),
                         depth_img,
-                        f"outputs/val_depth_map_{img_id:04d}.png",
+                        f"{output_folder}/val_depth_map_{img_id:04d}.png",
                     )
                 if self._param.log_surface_temperature:
                     surface_temp = self.grid.volume_render_surface_temperature_image(
@@ -591,7 +590,7 @@ class ThermoxelTrainer:
                     ThermoxelTrainer._log_concat_image(
                         thermal_gt_val.cpu(),
                         surface_temp.cpu(),
-                        f"outputs/val_surface_temp_image_{img_id:04d}.png",
+                        f"{output_folder}/val_surface_temp_image_{img_id:04d}.png",
                     )
 
             for stat_name in stats_val:

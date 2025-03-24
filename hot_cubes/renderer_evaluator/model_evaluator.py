@@ -156,13 +156,13 @@ class Evaluator:
                 Evaluator.log_concat_image(
                     im_gt.cpu().numpy(),
                     im.cpu().numpy(),
-                    f"outputs/test_image_{img_id:04d}.png",
+                    f"{self._param.render_dir}/test_image_{img_id:04d}.png",
                 )
 
                 Evaluator.log_concat_image(
                     im_gt_thermal.numpy(),
                     im_thermal.cpu().numpy(),
-                    f"outputs/test_thermal_{img_id:04d}.png",
+                    f"{self._param.render_dir}/test_thermal_{img_id:04d}.png",
                 )
 
                 if self._param.imsave or self._param.vidsave:
@@ -198,7 +198,7 @@ class Evaluator:
         mlflow.log_dict(all_metrics, "metrics")
         if log_only:
             return
-        with open(self._param.metric_path + "test_metric.json", "w") as file:
+        with open(self._param.metric_path / "test_metric.json", "w") as file:
             json.dump(all_metrics, file)
 
     def _compare_and_log_metrics(
