@@ -15,9 +15,11 @@ enum BasisType {
   BASIS_TYPE_MLP = 255,
 };
 
+
 struct SparseGridSpec {
   Tensor density_data;
   Tensor sh_data;
+  Tensor temperature_data;
   Tensor links;
   Tensor _offset;
   Tensor _scaling;
@@ -29,9 +31,11 @@ struct SparseGridSpec {
   uint8_t basis_type;
   Tensor basis_data;
 
+
   inline void check() {
     CHECK_INPUT(density_data);
     CHECK_INPUT(sh_data);
+    CHECK_INPUT(temperature_data);
     CHECK_INPUT(links);
     if (background_links.defined()) {
       CHECK_INPUT(background_links);
@@ -40,12 +44,13 @@ struct SparseGridSpec {
                   2);                                 // (H, W) -> [N] \cup {-1}
       TORCH_CHECK(background_data.ndimension() == 3); // (N, D, C) -> R
     }
-    if (basis_data.defined()) {
+        if (basis_data.defined()) {
       CHECK_INPUT(basis_data);
     }
     CHECK_CPU_INPUT(_offset);
     CHECK_CPU_INPUT(_scaling);
     TORCH_CHECK(density_data.ndimension() == 2);
+    TORCH_CHECK(temperature_data.ndimension() == 2);
     TORCH_CHECK(sh_data.ndimension() == 2);
     TORCH_CHECK(links.ndimension() == 3);
   }
@@ -54,6 +59,7 @@ struct SparseGridSpec {
 struct GridOutputGrads {
   torch::Tensor grad_density_out;
   torch::Tensor grad_sh_out;
+  torch::Tensor grad_temperature_out;
   torch::Tensor grad_basis_out;
   torch::Tensor grad_background_out;
 
@@ -69,6 +75,10 @@ struct GridOutputGrads {
     if (grad_basis_out.defined()) {
       CHECK_INPUT(grad_basis_out);
     }
+    if (grad_temperature_out.defined()) {
+      CHECK_INPUT(grad_temperature_out);
+    }
+
     if (grad_background_out.defined()) {
       CHECK_INPUT(grad_background_out);
     }
@@ -114,6 +124,8 @@ struct RaysSpec {
 
 struct RenderOptions {
   float background_brightness;
+  float background_temperature;
+  float empty_space_brightness;
   // float step_epsilon;
   float step_size;
   float sigma_thresh;
@@ -124,12 +136,18 @@ struct RenderOptions {
 
   bool last_sample_opaque;
 
-  // bool randomize;
-  // float random_sigma_std;
-  // float random_sigma_std_background;
-  // 32-bit RNG state masks
-  // uint32_t _m1, _m2, _m3;
+};
 
-  // int msi_start_layer = 0;
-  // int msi_end_layer = 66;
+
+struct PoseGrads {
+  Tensor grad_pose_origin_out;
+  Tensor grad_pose_direction_out;
+  inline void check() {
+    if (grad_pose_origin_out.defined()) {
+      CHECK_INPUT(grad_pose_origin_out);
+    }
+    if (grad_pose_direction_out.defined()) {
+      CHECK_INPUT(grad_pose_direction_out);
+    }
+  }
 };

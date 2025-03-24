@@ -8,8 +8,8 @@
 
 using torch::Tensor;
 
-std::tuple<torch::Tensor, torch::Tensor> sample_grid(SparseGridSpec &, Tensor,
-                                                     bool);
+std::tuple<torch::Tensor, torch::Tensor, torch::Tensor> sample_grid(SparseGridSpec &, Tensor, bool,
+bool);
 void sample_grid_backward(SparseGridSpec &, Tensor, Tensor, Tensor, Tensor,
                           Tensor, bool);
 
@@ -21,6 +21,18 @@ void volume_render_cuvol_backward(SparseGridSpec &, RaysSpec &, RenderOptions &,
                                   Tensor, Tensor, GridOutputGrads &);
 void volume_render_cuvol_fused(SparseGridSpec &, RaysSpec &, RenderOptions &,
                                Tensor, float, float, Tensor, GridOutputGrads &);
+
+void volume_render_cuvol_rgbt_fused(SparseGridSpec&, RaysSpec&, RenderOptions&, Tensor,
+                        Tensor, Tensor, float, float, float, float, float, float, float,
+                        Tensor, Tensor, GridOutputGrads&);
+
+void volume_render_cuvol_rgbt_forward(SparseGridSpec&, RaysSpec&, RenderOptions&,
+                                       Tensor,Tensor,Tensor);
+
+void volume_render_cuvol_rgbt_backward(SparseGridSpec&, RaysSpec&, RenderOptions&, Tensor,
+                        Tensor, Tensor, float, float, float, float, float, float, float,
+                        Tensor, Tensor, GridOutputGrads&, Tensor);
+
 // Expected termination (depth) rendering
 torch::Tensor volume_render_expected_term(SparseGridSpec &, RaysSpec &,
                                           RenderOptions &);
@@ -28,26 +40,36 @@ torch::Tensor volume_render_expected_term(SparseGridSpec &, RaysSpec &,
 torch::Tensor volume_render_sigma_thresh(SparseGridSpec &, RaysSpec &,
                                          RenderOptions &, float);
 
+torch::Tensor volume_render_surface_temperature(SparseGridSpec &, RaysSpec &,
+                                          RenderOptions &);
+torch::Tensor volume_render_surface_temperature_sigma_thresh(SparseGridSpec &, RaysSpec &,
+                                         RenderOptions &, float);
+
 // ** NV rendering formula (trilerp)
-Tensor volume_render_nvol(SparseGridSpec &, RaysSpec &, RenderOptions &);
-void volume_render_nvol_backward(SparseGridSpec &, RaysSpec &, RenderOptions &,
-                                 Tensor, Tensor, GridOutputGrads &);
-void volume_render_nvol_fused(SparseGridSpec &, RaysSpec &, RenderOptions &,
-                              Tensor, float, float, Tensor, GridOutputGrads &);
+//Tensor volume_render_nvol(SparseGridSpec &, RaysSpec &, RenderOptions &);
+//void volume_render_nvol_backward(SparseGridSpec &, RaysSpec &, RenderOptions &,
+//                                 Tensor, Tensor, GridOutputGrads &);
+//void volume_render_nvol_fused(SparseGridSpec &, RaysSpec &, RenderOptions &,
+//                              Tensor, float, float, Tensor, GridOutputGrads &);
 
 // ** NeRF rendering formula (nearest-neighbor, infinitely many steps)
-Tensor volume_render_svox1(SparseGridSpec &, RaysSpec &, RenderOptions &);
-void volume_render_svox1_backward(SparseGridSpec &, RaysSpec &, RenderOptions &,
-                                  Tensor, Tensor, GridOutputGrads &);
-void volume_render_svox1_fused(SparseGridSpec &, RaysSpec &, RenderOptions &,
-                               Tensor, float, float, Tensor, GridOutputGrads &);
+//Tensor volume_render_svox1(SparseGridSpec &, RaysSpec &, RenderOptions &);
+//void volume_render_svox1_backward(SparseGridSpec &, RaysSpec &, RenderOptions &,
+//                                  Tensor, Tensor, GridOutputGrads &);
+//void volume_render_svox1_fused(SparseGridSpec &, RaysSpec &, RenderOptions &,
+//                               Tensor, float, float, Tensor, GridOutputGrads &);
 
-// Tensor volume_render_cuvol_image(SparseGridSpec &, CameraSpec &,
-//                                  RenderOptions &);
-//
-// void volume_render_cuvol_image_backward(SparseGridSpec &, CameraSpec &,
-//                                         RenderOptions &, Tensor, Tensor,
-//                                         GridOutputGrads &);
+// temperature :
+//void volume_render_fused_rgbt(SparseGridSpec&, RaysSpec&, RenderOptions&, Tensor,
+//Tensor, float, float, float, Tensor, Tensor, GridOutputGrads&);
+
+torch::Tensor render_pos_forward_rgbt(SparseGridSpec&, RaysSpec&, RenderOptions& ,
+Tensor, Tensor);
+
+
+//void render_pos_backward_rgbt(SparseGridSpec&, RaysSpec&, RenderOptions& , Tensor,
+//Tensor, Tensor, Tensor, PoseGrads&);
+
 
 // Misc
 Tensor dilate(Tensor);
@@ -79,16 +101,23 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
   _REG_FUNC(volume_render_cuvol_image);
   _REG_FUNC(volume_render_cuvol_backward);
   _REG_FUNC(volume_render_cuvol_fused);
+  _REG_FUNC(volume_render_cuvol_rgbt_fused);
+  _REG_FUNC(volume_render_cuvol_rgbt_forward);
+  _REG_FUNC(volume_render_cuvol_rgbt_backward);
   _REG_FUNC(volume_render_expected_term);
+  _REG_FUNC(volume_render_surface_temperature);
+  _REG_FUNC(volume_render_surface_temperature_sigma_thresh);
   _REG_FUNC(volume_render_sigma_thresh);
 
-  _REG_FUNC(volume_render_nvol);
-  _REG_FUNC(volume_render_nvol_backward);
-  _REG_FUNC(volume_render_nvol_fused);
+//  _REG_FUNC(volume_render_nvol);
+//  _REG_FUNC(volume_render_nvol_backward);
+//  _REG_FUNC(volume_render_nvol_fused);
+  _REG_FUNC(render_pos_forward_rgbt);
+//  _REG_FUNC(render_pos_backward_rgbt);
 
-  _REG_FUNC(volume_render_svox1);
-  _REG_FUNC(volume_render_svox1_backward);
-  _REG_FUNC(volume_render_svox1_fused);
+//  _REG_FUNC(volume_render_svox1);
+//  _REG_FUNC(volume_render_svox1_backward);
+//  _REG_FUNC(volume_render_svox1_fused);
 
   // _REG_FUNC(volume_render_cuvol_image);
   // _REG_FUNC(volume_render_cuvol_image_backward);
@@ -114,13 +143,12 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
   py::class_<SparseGridSpec>(m, "SparseGridSpec")
       .def(py::init<>())
       .def_readwrite("density_data", &SparseGridSpec::density_data)
+      .def_readwrite("temperature_data", &SparseGridSpec::temperature_data)
       .def_readwrite("sh_data", &SparseGridSpec::sh_data)
       .def_readwrite("links", &SparseGridSpec::links)
       .def_readwrite("_offset", &SparseGridSpec::_offset)
       .def_readwrite("_scaling", &SparseGridSpec::_scaling)
       .def_readwrite("basis_dim", &SparseGridSpec::basis_dim)
-      .def_readwrite("basis_type", &SparseGridSpec::basis_type)
-      .def_readwrite("basis_data", &SparseGridSpec::basis_data)
       .def_readwrite("background_links", &SparseGridSpec::background_links)
       .def_readwrite("background_data", &SparseGridSpec::background_data);
 
@@ -145,23 +173,21 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
       .def(py::init<>())
       .def_readwrite("background_brightness",
                      &RenderOptions::background_brightness)
+      .def_readwrite("background_temperature",
+                     &RenderOptions::background_temperature)
+      .def_readwrite("empty_space_brightness",
+                     &RenderOptions::empty_space_brightness)
       .def_readwrite("step_size", &RenderOptions::step_size)
       .def_readwrite("sigma_thresh", &RenderOptions::sigma_thresh)
       .def_readwrite("stop_thresh", &RenderOptions::stop_thresh)
       .def_readwrite("near_clip", &RenderOptions::near_clip)
       .def_readwrite("use_spheric_clip", &RenderOptions::use_spheric_clip)
       .def_readwrite("last_sample_opaque", &RenderOptions::last_sample_opaque);
-  // .def_readwrite("randomize", &RenderOptions::randomize)
-  // .def_readwrite("random_sigma_std", &RenderOptions::random_sigma_std)
-  // .def_readwrite("random_sigma_std_background",
-  //                &RenderOptions::random_sigma_std_background)
-  // .def_readwrite("_m1", &RenderOptions::_m1)
-  // .def_readwrite("_m2", &RenderOptions::_m2)
-  // .def_readwrite("_m3", &RenderOptions::_m3);
 
   py::class_<GridOutputGrads>(m, "GridOutputGrads")
       .def(py::init<>())
       .def_readwrite("grad_density_out", &GridOutputGrads::grad_density_out)
+       .def_readwrite("grad_temperature_out", &GridOutputGrads::grad_temperature_out)
       .def_readwrite("grad_sh_out", &GridOutputGrads::grad_sh_out)
       .def_readwrite("grad_basis_out", &GridOutputGrads::grad_basis_out)
       .def_readwrite("grad_background_out",

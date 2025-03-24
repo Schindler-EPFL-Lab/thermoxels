@@ -152,6 +152,37 @@ __device__ __inline__ void trilerp_backward_cuvol_one_density(
 #undef MAYBE_ADD_LINK_DEN
 }
 
+
+template<class data_type_t, class voxel_index_t>
+__device__ __inline__ void trilerp_backward_cuvol_one_temperature(
+        const int32_t* __restrict__ links,
+        data_type_t* __restrict__ grad_data_out,
+        int offx, int offy,
+        const voxel_index_t* __restrict__ l,
+        const float* __restrict__ pos,
+        float grad_out) {
+    const float ay = 1.f - pos[1], az = 1.f - pos[2];
+    float xo = (1.0f - pos[0]) * grad_out;
+
+    const int32_t* __restrict__ link_ptr = links + (offx * l[0] + offy * l[1] + l[2]);
+
+#define MAYBE_ADD_LINK_TEMP(u, val) if (link_ptr[u] >= 0) { \
+              atomicAdd(&grad_data_out[link_ptr[u]], val); \
+        }
+    MAYBE_ADD_LINK_TEMP(0, ay * az * xo);
+    MAYBE_ADD_LINK_TEMP(1, ay * pos[2] * xo);
+    MAYBE_ADD_LINK_TEMP(offy, pos[1] * az * xo);
+    MAYBE_ADD_LINK_TEMP(offy + 1, pos[1] * pos[2] * xo);
+
+    xo = pos[0] * grad_out;
+    MAYBE_ADD_LINK_TEMP(offx + 0, ay * az * xo);
+    MAYBE_ADD_LINK_TEMP(offx + 1, ay * pos[2] * xo);
+    MAYBE_ADD_LINK_TEMP(offx + offy, pos[1] * az * xo);
+    MAYBE_ADD_LINK_TEMP(offx + offy + 1, pos[1] * pos[2] * xo);
+#undef MAYBE_ADD_LINK_TEMP
+}
+
+
 // Trilerp with xy links & wrapping (background)
 template<class data_type_t, class voxel_index_t>
 __device__ __inline__ float trilerp_bg_one(
@@ -185,6 +216,104 @@ __device__ __inline__ float trilerp_bg_one(
     const float ix1 = lerp(ix1y0, ix1y1, pos[1]);
     return lerp(ix0, ix1, pos[0]);
 #undef MAYBE_READ_LINK2
+}
+
+
+// START POSE OPTIM UTILS
+__device__ __inline__ void get_trilerp_const(
+    const float* __restrict__ c_data,
+    float* __restrict__ a_data) {
+    a_data[0] = c_data[0];
+    a_data[1] = -c_data[0] + c_data[4];
+    a_data[2] = -c_data[0] + c_data[2];
+    a_data[3] = -c_data[0] + c_data[1];
+    a_data[4] = c_data[0] - c_data[2] - c_data[4] + c_data[6];
+    a_data[5] = c_data[0] - c_data[1] - c_data[4] + c_data[5];
+    a_data[6] = c_data[0] - c_data[1] - c_data[2] + c_data[3];
+    a_data[7] = -c_data[0] + c_data[1] + c_data[2] - c_data[3] \
+                + c_data[4] - c_data[5] - c_data[6] + c_data[7];
+}
+
+__device__ __inline__ void trilerp_deriv_pos(
+    const float* __restrict__ a_data,
+    const float* __restrict__ pos,
+    float* __restrict__ deriv){
+    deriv[0] = a_data[1] + a_data[4]*pos[1] + a_data[5]*pos[2] + a_data[7]*pos[1]*pos[2];
+    deriv[1] = a_data[2] + a_data[4]*pos[0] + a_data[6]*pos[2] + a_data[7]*pos[0]*pos[2];
+    deriv[2] = a_data[3] + a_data[5]*pos[0] + a_data[6]*pos[1] + a_data[7]*pos[0]*pos[1];
+}
+
+
+template<class data_type_t, class voxel_index_t>
+__device__ __inline__ void trilerp_backward_pos_density(
+        const int32_t* __restrict__ links,
+        const data_type_t* __restrict__ density_data,
+        data_type_t* __restrict__ grad_trilerp_density, //out
+        int reso, const voxel_index_t* __restrict__ l,
+        const float* __restrict__ pos) {
+
+    const int offz = 1;
+    const int offy = reso*offz;
+    const int offx = reso*offy;
+
+    float density_voxel_val[8];
+
+    const int32_t* __restrict__ link_ptr = links + (offx*l[0] + offy*l[1] + l[2]);
+
+#define MAYBE_READ_LINK(u) ((link_ptr[u] >= 0) ? density_data[link_ptr[u]] : 0.f)
+    density_voxel_val[0] = MAYBE_READ_LINK(0);           // C000 = 0
+    density_voxel_val[1] = MAYBE_READ_LINK(1);           // C001 = 1
+    density_voxel_val[2] = MAYBE_READ_LINK(offy);        // C010 = offy
+    density_voxel_val[3] = MAYBE_READ_LINK(offy+1);      // C011 = offy+1
+    density_voxel_val[4] = MAYBE_READ_LINK(offx);        // C100 = offx
+    density_voxel_val[5] = MAYBE_READ_LINK(offx+1);      // C101 = offx+1
+    density_voxel_val[6] = MAYBE_READ_LINK(offx+offy);   // C110 = offx+offy
+    density_voxel_val[7] = MAYBE_READ_LINK(offx+offy+1); // C111 = offx+offy+1
+#undef MAYBE_READ_LINK
+
+}
+
+
+
+template<class data_type_t, class voxel_index_t>
+__device__ __inline__ void trilerp_backward_pos_color(
+        const int32_t* __restrict__ links,
+        const data_type_t* __restrict__ sh_data,
+        data_type_t* __restrict__ grad_trilerp_color, //out
+        int reso,
+        size_t sh_data_dim,
+        const voxel_index_t* __restrict__ l,
+        const float* __restrict__ pos,
+        const int idx) {
+    const int offz = 1;
+    const int offy = reso*offz;
+    const int offx = reso*offy;
+
+    float color_voxel_val[8];
+    const int32_t* __restrict__ link_ptr = links + (offx*l[0] + offy*l[1] + l[2]);
+
+#define MAYBE_READ_LINK(u) ((link_ptr[u] >= 0) ? sh_data[link_ptr[u]*sh_data_dim + idx] : 0.f)
+    color_voxel_val[0] = MAYBE_READ_LINK(0);           // C000 = 0
+    color_voxel_val[1] = MAYBE_READ_LINK(1);           // C001 = 1
+    color_voxel_val[2] = MAYBE_READ_LINK(offy);        // C010 = offy
+    color_voxel_val[3] = MAYBE_READ_LINK(offy+1);      // C011 = offy+1
+    color_voxel_val[4] = MAYBE_READ_LINK(offx);        // C100 = offx
+    color_voxel_val[5] = MAYBE_READ_LINK(offx+1);      // C101 = offx+1
+    color_voxel_val[6] = MAYBE_READ_LINK(offx+offy);   // C110 = offx+offy
+    color_voxel_val[7] = MAYBE_READ_LINK(offx+offy+1); // C111 = offx+offy+1
+#undef MAYBE_READ_LINK
+
+    float trilin_color_const[8];
+
+    get_trilerp_const(
+        color_voxel_val,
+        trilin_color_const
+    );
+    trilerp_deriv_pos(
+        trilin_color_const,
+        pos,
+        grad_trilerp_color //output
+    );
 }
 
 template<class data_type_t, class voxel_index_t>
@@ -619,12 +748,6 @@ __device__ __inline__ void ray_find_bounds(
         }
     }
 
-    // if (opt.randomize && opt.random_sigma_std > 0.0) {
-    //     // Seed the RNG
-    //     ray.rng.x = opt._m1 ^ ray_id;
-    //     ray.rng.y = opt._m2 ^ ray_id;
-    //     ray.rng.z = opt._m3 ^ ray_id;
-    // }
 }
 
 __device__ __inline__ void ray_find_bounds_bg(
@@ -656,23 +779,29 @@ __device__ __inline__ void ray_find_bounds_bg(
         ray.dir[i] *= inorm;
     }
 
-    // float q2a = 2 * _dot(ray.dir, ray.dir);
-    // float qb = 2 * _dot(ray.origin, ray.dir);
-    // float f = qb * qb - 2 * q2a * _dot(ray.origin, ray.origin);
-    // const float det = f + 2 * q2a * opt.background_msi_scale * opt.background_msi_scale;
-    //
-    // if (det < 0.f) {
-    //     ray.tmin = opt.background_msi_scale;
-    // } else {
-    //     ray.tmin = (-qb + sqrtf(det)) / q2a;
-    // }
+}
 
-    // if (opt.randomize && opt.random_sigma_std_background > 0) {
-    //     // Seed the RNG (hacks)
-    //     ray.rng.x = opt._m2 ^ (ray_id - 1);
-    //     ray.rng.y = opt._m3 ^ (ray_id - 1);
-    //     ray.rng.z = opt._m1 ^ (ray_id - 1);
-    // }
+
+__device__ __inline__ float ray_find_bounds_rscale(
+        SingleRaySpec& __restrict__ ray,
+        const PackedSparseGridSpec& __restrict__ grid,
+        const RenderOptions& __restrict__ opt) {
+    transform_coord(ray.origin, grid._scaling, grid._offset);
+    float delta_scale;
+    delta_scale = _get_delta_scale(grid._scaling, ray.dir);
+    ray.world_step = delta_scale*opt.step_size;
+    ray.tmin = opt.near_clip / ray.world_step*opt.step_size;
+    ray.tmax = 2e3f;
+    for (int i = 0; i < 3; ++i) {
+        const float invdir = 1.0 / ray.dir[i];
+        const float t1 = (-0.5f - ray.origin[i])*invdir;
+        const float t2 = (grid.size[i] - 0.5f  - ray.origin[i])*invdir;
+        if (ray.dir[i] != 0.f) {
+            ray.tmin = max(ray.tmin, min(t1, t2));
+            ray.tmax = min(ray.tmax, max(t1, t2));
+        }
+    }
+    return delta_scale;
 }
 
 } // namespace device

@@ -12,6 +12,7 @@ struct PackedSparseGridSpec {
     PackedSparseGridSpec(SparseGridSpec& spec)
         :
           density_data(spec.density_data.data_ptr<float>()),
+          temperature_data(spec.temperature_data.data_ptr<float>()),
           sh_data(spec.sh_data.data_ptr<float>()),
           links(spec.links.data_ptr<int32_t>()),
           basis_type(spec.basis_type),
@@ -34,6 +35,8 @@ struct PackedSparseGridSpec {
           },
           basis_dim(spec.basis_dim),
           sh_data_dim((int)spec.sh_data.size(1)),
+//           temperature_data_dim((int)spec.temperature_data.size(1)),
+          temperature_data_dim((int)spec.temperature_data.size(1)),
           basis_reso(spec.basis_data.defined() ? spec.basis_data.size(0) : 0),
           _offset{spec._offset.data_ptr<float>()[0],
                   spec._offset.data_ptr<float>()[1],
@@ -44,6 +47,7 @@ struct PackedSparseGridSpec {
     }
 
     float* __restrict__ density_data;
+    float* __restrict__ temperature_data;
     float* __restrict__ sh_data;
     const int32_t* __restrict__ links;
 
@@ -56,7 +60,7 @@ struct PackedSparseGridSpec {
     const int size[3], stride_x;
     const int background_reso, background_nlayers;
 
-    const int basis_dim, sh_data_dim, basis_reso;
+    const int basis_dim, sh_data_dim, basis_reso, temperature_data_dim;
     const float _offset[3];
     const float _scaling[3];
 };
@@ -64,6 +68,7 @@ struct PackedSparseGridSpec {
 struct PackedGridOutputGrads {
     PackedGridOutputGrads(GridOutputGrads& grads) :
         grad_density_out(grads.grad_density_out.defined() ? grads.grad_density_out.data_ptr<float>() : nullptr),
+        grad_temperature_out(grads.grad_temperature_out.defined() ? grads.grad_temperature_out.data_ptr<float>() : nullptr),
         grad_sh_out(grads.grad_sh_out.defined() ? grads.grad_sh_out.data_ptr<float>() : nullptr),
         grad_basis_out(grads.grad_basis_out.defined() ? grads.grad_basis_out.data_ptr<float>() : nullptr),
         grad_background_out(grads.grad_background_out.defined() ? grads.grad_background_out.data_ptr<float>() : nullptr),
@@ -71,6 +76,7 @@ struct PackedGridOutputGrads {
         mask_background_out((grads.mask_background_out.defined() && grads.mask_background_out.size(0) > 0) ? grads.mask_background_out.data_ptr<bool>() : nullptr)
         {}
     float* __restrict__ grad_density_out;
+    float* __restrict__ grad_temperature_out;
     float* __restrict__ grad_sh_out;
     float* __restrict__ grad_basis_out;
     float* __restrict__ grad_background_out;
@@ -132,3 +138,13 @@ struct SingleRaySpec {
 
 }  // namespace device
 }  // namespace
+
+struct PackedPoseGrads {
+    PackedPoseGrads(PoseGrads& grads) :
+        grad_pose_origin_out(grads.grad_pose_origin_out.data_ptr<float>()),
+        grad_pose_direction_out(grads.grad_pose_direction_out.data_ptr<float>())
+        {}
+    float* __restrict__ grad_pose_origin_out;
+    float* __restrict__ grad_pose_direction_out;
+};
+

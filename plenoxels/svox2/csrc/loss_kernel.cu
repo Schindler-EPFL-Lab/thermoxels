@@ -27,24 +27,7 @@ void calculate_ray_scale(float ndc_coeffx,
                          float maxy,
                          float maxz,
                          float* __restrict__ scale) {
-    // if (ndc_coeffx > 0.f) {
-    //     // FF NDC
-    //     scale[0] = maxx * (1.f / 256.f);
-    //     scale[1] = maxy * (1.f / 256.f);
-    //     scale[2] = maxz * (1.f / 256.f);
 
-        // The following shit does not work
-        // // Normalized to [-1, 1] (with 0.5 padding)
-        // // const float x_norm = (x + 0.5) / maxx * 2 - 1;
-        // // const float y_norm = (y + 0.5) / maxy * 2 - 1;
-        // const float z_norm = (z + 0.5) / maxz * 2 - 1;
-        //
-        // // NDC distances
-        // const float disparity = (1 - z_norm) / 2.f; // in [0, 1]
-        // scale[0] = (ndc_coeffx * disparity);
-        // scale[1] = (ndc_coeffy * disparity);
-        // scale[2] = -((z_norm - 1.f + 2.f / maxz) * disparity) / (maxz * 0.5f);
-    // } else {
         scale[0] = maxx * (1.f / 256.f);
         scale[1] = maxy * (1.f / 256.f);
         scale[2] = maxz * (1.f / 256.f);
@@ -289,29 +272,7 @@ __global__ void msi_tv_grad_sparse_kernel(
     float dy = (v01 - v00);
     float dz = (v_nxl - v00);
     const float idelta = scale * rsqrtf(1e-9f + dx * dx + dy * dy + dz * dz);
-    // printf("x=%d y=%d z=%d nx=%d ny=%d dx=%f dy=%f dz=%f scale=%f\n", x, y, z,
-    //        nx, ny, dx, dy, dz, scale);
 
-    // const float msi_nlayers = msi.size(1);
-
-    // const float radius = msi_nlayers / (msi_nlayers - z - 0.5f);
-    // const float nxl_radius = msi_nlayers / (msi_nlayers - z - 1.5f);
-    // const float invr = 1.f / radius;
-    // float coord00[3], coord01[3], coord10[3];
-    // _equirect2unitvec(x, y, links.size(1), coord00);
-    // _equirect2unitvec(x, ny, links.size(1), coord01);
-    // _equirect2unitvec(nx, y, links.size(1), coord10);
-    // printf("r=%f nlr=%f coord00[%f %f %f] coord01[%f %f %f] coord10[%f %f %f]\n",
-    //         radius, nxl_radius,
-    //         coord00[0], coord00[1], coord00[2],
-    //         coord01[0], coord01[1], coord01[2],
-    //         coord10[0], coord10[1], coord10[2]);
-
-    // xsuby3d(coord01, coord00);
-    // xsuby3d(coord10, coord00);
-    // dx *= _rnorm(coord10) * invr;
-    // dy *= _rnorm(coord01) * invr;
-    // dz *= 1.f / (nxl_radius - radius);
     dx *= links.size(0) * (1.f / 256.f);
     dy *= links.size(1) * (1.f / 256.f);
     dz *= msi.size(1) * (1.f / 256.f);
@@ -446,34 +407,6 @@ __global__ void lumisphere_tv_grad_sparse_kernel(
 
 #undef MAYBE_ADD_SET
 
-    // TODO
-    // __syncwarp(use_mask);
-    // if (lane_id < grid.basis_dim) {
-    //     calc_sphfunc_backward(
-    //             grid,
-    //             lane_id,
-    //             point_id,
-    //             dir,
-    //             sphfunc_val[point_blk_id],
-    //             grad_sphfunc_val_v[point_blk_id],
-    //             grad_basis_out);
-    //     calc_sphfunc_backward(
-    //             grid,
-    //             lane_id,
-    //             point_id,
-    //             dir_u,
-    //             sphfunc_val_u[point_blk_id],
-    //             grad_sphfunc_val[point_blk_id],
-    //             grad_basis_out);
-    //     calc_sphfunc_backward(
-    //             grid,
-    //             lane_id,
-    //             point_id,
-    //             dir_v,
-    //             sphfunc_val_v[point_blk_id],
-    //             grad_sphfunc_val_v[point_blk_id],
-    //             grad_basis_out);
-    // }
 }
 
 }  // namespace device
@@ -559,7 +492,8 @@ void tv_grad_sparse(torch::Tensor links,
              torch::Tensor data,
              torch::Tensor rand_cells,
              torch::Tensor mask_out,
-             int start_dim, int end_dim,
+             int start_dim,
+             int end_dim,
              float scale,
              bool use_logalpha,
              float logalpha_delta,
