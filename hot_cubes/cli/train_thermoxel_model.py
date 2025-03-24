@@ -73,12 +73,16 @@ def main():
 
     trainer.optimize(factor=factor)
 
-    trainer.save_model()
+    trainer.save_model(to_folder=param.model_save_path / "kelvin")
+    trainer.save_model(
+        to_folder=param.model_save_path / "celsius",
+        new_scale="Celsius",
+    )
 
     # Evaluate the model
     assert param.data_dir is not None
     render_param = RenderParam(
-        model_path=param.model_save_path,
+        model_path=param.model_save_path / "kelvin",
         data_dir=param.data_dir,
         render_dir="./",
         nobg=False,

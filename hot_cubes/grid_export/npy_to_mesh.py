@@ -10,13 +10,12 @@ import numpy as np
 import pyvista
 import pyvista.examples
 import tyro
-from scipy.constants import convert_temperature
+
+from hot_cubes.svox2_temperature import SparseGrid
 
 
 def convert_to_hex8_mesh(
     ckpt_path: Path,
-    min_temperature_bound: float,
-    max_temperature_bound: float,
     density_threshold: float = 22.0,
 ) -> None:
     """
@@ -28,17 +27,19 @@ def convert_to_hex8_mesh(
     Output file is saved in the same folder as the input file.
     """
 
-    grid = np.load(Path(ckpt_path, "links.npy"))
+    sparsegrid = SparseGrid.load(ckpt_path, normalize=False)
+
+    grid = sparsegrid.links.numpy().astype(float)
     mask = grid >= 0
     idxs = grid[mask]
-    density_data = np.load(Path(ckpt_path, "density_data.npy"))
-    density = density_data[idxs][:, 0].astype(float)
-    grid[mask] = density
+    density_data = sparsegrid.density_data[idxs][:, 0].detach().numpy().astype(float)
+    grid[mask] = density_data
 
-    temperature_data = np.load(Path(ckpt_path, "temperature_data.npy"))
-    temperature_in_celsius = temperature_data[idxs][:, 0].astype(float)
-    temperature_grid = np.load(Path(ckpt_path, "links.npy")).astype(float)
-    temperature_grid[mask] = temperature_in_celsius
+    temperatures = (
+        sparsegrid.temperature_data[idxs][:, 0].detach().numpy().astype(float)
+    )
+    temperature_grid = sparsegrid.links.numpy().astype(float)
+    temperature_grid[mask] = temperatures
 
     # MinMax density values for information
     logging.info(f"min density: {density_data.min()}")
@@ -85,18 +86,8 @@ def convert_to_hex8_mesh(
                         point_indices[point] = len(points)
                         points.append(point)
 
-                        raw_temperature = temperature_grid[point[0], point[1], point[2]]
-                        temperature_in_celsius = convert_value_from_to_interval(
-                            np.clip(raw_temperature, 0, 1),
-                            from_start=0.0,
-                            from_end=1.0,
-                            to_start=min_temperature_bound,
-                            to_end=max_temperature_bound,
-                        )
-                        temperature_in_kelvin = convert_temperature(
-                            temperature_in_celsius, "Celsius", "Kelvin"
-                        )
-                        point_temperatures.append(temperature_in_kelvin)
+                        temperature = temperature_grid[point[0], point[1], point[2]]
+                        point_temperatures.append(temperature)
 
                     cell.append(point_indices[point])
 
@@ -104,7 +95,9 @@ def convert_to_hex8_mesh(
                 cells.append(cell)
 
     # Export mesh using meshio
-    output_path = Path(ckpt_path, "hex8_temperature_mesh.vtk")
+    output_path = Path(
+        ckpt_path, ckpt_path.stem + "_" + str(density_threshold) + ".vtu"
+    )
 
     meshio_points = np.array(points, dtype=float)
     meshio_cells = [("hexahedron", np.array(cells))]

@@ -11,21 +11,21 @@ import torch.optim
 from tqdm import tqdm
 
 import hot_cubes.svox2_temperature as svox2
+from hot_cubes.datasets.thermo_scene_dataset import ThermoSceneDataset
 from hot_cubes.model.training_param import TrainingParam
 from hot_cubes.renderer_evaluator.thermal_evaluation_metrics import (
     compute_psnr,
     compute_thermal_metric_maps,
 )
 from plenoxels.opt.util import config_util
-from plenoxels.opt.util.dataset_base import DatasetBase
 from plenoxels.opt.util.util import get_expon_lr_func, viridis_cmap
 
 
 class ThermoxelTrainer:
     def __init__(
         self,
-        dataset: DatasetBase,
-        dataset_val: DatasetBase,
+        dataset: ThermoSceneDataset,
+        dataset_val: ThermoSceneDataset,
         param: TrainingParam,
         min_temperature: float,
         max_temperature: float,
@@ -101,16 +101,20 @@ class ThermoxelTrainer:
     def min_temperature(self) -> float:
         return self._min_temperature
 
-    def save_model(self, to_folder: Path | None = None) -> None:
+    def save_model(
+        self,
+        to_folder: Path | None = None,
+        new_scale: str = "Kelvin",
+    ) -> None:
         if to_folder is None:
             to_folder = self._param.model_save_path
 
-        model_path = self.grid.save(
+        self.grid.save(
             to_folder,
             max_temperature=self.max_temperature,
             min_temperature=self.min_temperature,
+            new_scale=new_scale,
         )
-        mlflow.log_artifact(str(model_path))
 
     def optimize(
         self,

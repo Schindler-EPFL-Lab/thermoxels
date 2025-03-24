@@ -1,8 +1,9 @@
+import logging
 from dataclasses import dataclass
 from datetime import datetime
 
 import tyro
-from azure.ai.ml import Input, command
+from azure.ai.ml import Input, Output, command
 from azure.ai.ml.constants import AssetTypes, InputOutputModes
 from azure_ml_utils.azure_connect import get_client
 
@@ -51,6 +52,10 @@ class EvalParameters:
         if self.training_param.data_dir is not None:
             raise ValueError("data_dir must not be provided")
 
+        self.experiment_name = "train-thermoxel-" + self.training_param.scene_name
+
+        logging.warning("The output folder will be fixed to thermoxel_model.")
+
 
 def main() -> None:
     params = tyro.cli(EvalParameters)
@@ -77,59 +82,70 @@ def main() -> None:
         ),
     )
 
-    job_name = (
-        "train-thermoxel-"
-        + params.training_param.scene_name
-        + "-"
-        + datetime.now().strftime("%d-%m-%Y-%H%M%S")
-    )
+    job_outputs = {
+        "thermoxel_model": Output(type=AssetTypes.CUSTOM_MODEL),  # type: ignore
+    }
 
-    cmd = (
-        "CUDA_LAUNCH_BLOCKING=1 python3.10 "
-        "hot_cubes/cli/train_thermoxel_model.py "
-        "--data_dir ${{inputs.data}} "
-        "--model-save-path ./ "
-        "--n_epoch "
-        + str(params.training_param.n_epoch)
-        + " --scene-radius "
-        + str(params.training_param.scene_radius)
-        + " --tv_sparsity "
-        + str(params.training_param.tv_sparsity)
-        + " --tv_sh_sparsity 0.25 "
-        "--tv_temp_sparsity 0.1 "
-        "--save_every 0 "
-        "--eval_every 0 "
-        "--log_mse_image "
-        "--log_mae_image "
-        "--scene-name " + params.training_param.scene_name
-    )
-    if not params.training_param.is_thermoxels:
-        cmd += " --no-is-thermoxels"
-        job_name = (
-            "train-plenoxel-t-"
-            + params.training_param.scene_name
-            + "-"
-            + datetime.now().strftime("%d-%m-%Y-%H%M%S")
-        )
-    if params.environment_version.isnumeric():
-        env_version_string = ":" + params.environment_version
-    else:
-        env_version_string = "@" + params.environment_version
+    for radius in [6]:
+        for tv_sparsity in [0.1]:
+            for tv_temp_sparsity in [0.1]:
+                for tv_sh_sparsity in [0.1]:
+                    job_name = (
+                        "train-thermoxel-"
+                        + params.training_param.scene_name
+                        + "-"
+                        + datetime.now().strftime("%d-%m-%Y-%H%M%S")
+                    )
 
-    job = command(
-        inputs=job_inputs,
-        code=".",
-        environment=params.environment + env_version_string,
-        compute="nerf-a100-2",
-        command=cmd,
-        experiment_name=params.experiment_name,
-        display_name=job_name,
-        name=job_name,
-    )
+                    cmd = (
+                        "CUDA_LAUNCH_BLOCKING=1 python3.10 "
+                        "hot_cubes/cli/train_thermoxel_model.py "
+                        "--data_dir ${{inputs.data}} "
+                        "--model-save-path ${{outputs.thermoxel_model}} "
+                        "--n_epoch "
+                        + str(params.training_param.n_epoch)
+                        + " --scene-radius "
+                        + str(radius)
+                        + " --tv_sparsity "
+                        + str(tv_sparsity)
+                        + " --tv_sh_sparsity "
+                        + str(tv_sh_sparsity)
+                        + " "
+                        "--tv_temp_sparsity " + str(tv_temp_sparsity) + " "
+                        "--save_every 0 "
+                        "--eval_every 0 "
+                        "--log_mse_image "
+                        "--log_mae_image "
+                        "--scene-name " + params.training_param.scene_name
+                    )
+                    if not params.training_param.is_thermoxels:
+                        cmd += " --no-is-thermoxels"
+                        job_name = (
+                            "train-plenoxel-t-"
+                            + params.training_param.scene_name
+                            + "-"
+                            + datetime.now().strftime("%d-%m-%Y-%H%M%S")
+                        )
+                    if params.environment_version.isnumeric():
+                        env_version_string = ":" + params.environment_version
+                    else:
+                        env_version_string = "@" + params.environment_version
 
-    returned_job = ml_client.jobs.create_or_update(job)
+                    job = command(
+                        inputs=job_inputs,
+                        outputs=job_outputs,
+                        code=".",
+                        environment=params.environment + env_version_string,
+                        compute="nerf-a100-2",
+                        command=cmd,
+                        experiment_name=params.experiment_name,
+                        display_name=job_name,
+                        name=job_name,
+                    )
 
-    assert returned_job.services is not None
+                    returned_job = ml_client.jobs.create_or_update(job)
+
+                    assert returned_job.services is not None
 
 
 if __name__ == "__main__":

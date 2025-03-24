@@ -7,7 +7,12 @@ from typing import List, Optional, Tuple, Union
 from warnings import warn
 
 import numpy as np
-import svox2.csrc as _C
+
+# Hack to use locally without installing svox2
+try:
+    import svox2.csrc as _C
+except:
+    pass
 import torch
 from scipy.constants import convert_temperature
 from torch import autograd, nn
@@ -1869,35 +1874,39 @@ class SparseGrid(nn.Module):
 
     @staticmethod
     def model_filename() -> str:
-        return "ckpt.npz"
+        return "ckpt2.npz"
 
     def save(
         self,
         checkpoint_folder: Path,
         min_temperature: float,
         max_temperature: float,
+        new_scale: str = "Kelvin",
         compress: bool = False,
     ) -> None:
         """
-        Save to a path
+        Save a model in the folder `checkpoint_folder`.
         """
+
+        checkpoint_folder.mkdir(parents=True, exist_ok=True)
 
         save_fn = np.savez_compressed if compress else np.savez
 
         temperature_data = self.temperature_data.data.cpu().numpy().astype(np.float16)
         new_temperature_data: list[float] = []
         for temperature in temperature_data:
-            temperature_in_celsius = SparseGrid._convert_value_from_to_interval(
+            temperature_value = SparseGrid._convert_value_from_to_interval(
                 np.clip(temperature, 0, 1),
                 from_start=0.0,
                 from_end=1.0,
                 to_start=min_temperature,
                 to_end=max_temperature,
             )
-            temperature_in_kelvin = convert_temperature(
-                temperature_in_celsius, "Celsius", "Kelvin"
-            )
-            new_temperature_data.append(temperature_in_kelvin)
+            if new_scale != "Celsius":
+                temperature_value = convert_temperature(
+                    temperature_value, "Celsius", new_scale
+                )
+            new_temperature_data.append(temperature_value)
 
         data = {
             "radius": self.radius.numpy(),
@@ -1916,10 +1925,13 @@ class SparseGrid(nn.Module):
         data_temperature = {
             "min_temperature": min_temperature,
             "max_temperature": max_temperature,
+            "scale": new_scale,
         }
-        with open(checkpoint_folder / "temperature_bounds.json", "w") as json_file:
+        with open(checkpoint_folder / "information.json", "w") as json_file:
             json.dump(data_temperature, json_file, indent=4)
-        save_fn(checkpoint_folder / self.model_filename(), **data)
+
+        model_name = self.model_filename()
+        save_fn(checkpoint_folder / model_name, **data)
 
     @classmethod
     def load(
@@ -1927,17 +1939,21 @@ class SparseGrid(nn.Module):
         checkpoint_folder: Path,
         device: Union[torch.device, str] = "cpu",
         is_thermoxels: bool = False,
-    ):
+        normalize: bool = True,
+    ) -> "SparseGrid":
         """
         Load from path
         """
         # Get min and max temperature
-        with open(checkpoint_folder / "temperature_bounds.json") as file:
+        with open(checkpoint_folder / "information.json") as file:
             data = json.load(file)
         t_max = data["max_temperature"]
         t_min = data["min_temperature"]
+        scale = data["scale"]
 
-        z = np.load(checkpoint_folder / cls.model_filename())
+        model_name = cls.model_filename()
+
+        z = np.load(checkpoint_folder / model_name)
         if "data" in z.keys():
             # Compatibility
             all_data = z.f.data
@@ -1947,13 +1963,22 @@ class SparseGrid(nn.Module):
             sh_data = z.f.sh_data
             density_data = z.f.density_data
             temperature_data = z.f.temperature_data
-            SparseGrid._convert_value_from_to_interval(
-                value=temperature_data,
-                from_start=t_min,
-                from_end=t_max,
-                to_start=0.0,
-                to_end=1.0,
-            )
+            new_temperature_data: list[float] = []
+            for temperature_value in temperature_data:
+                if scale != "Celsius":
+                    temperature_value = convert_temperature(
+                        temperature_value, scale, "Celsius"
+                    )
+                if normalize:
+                    temperature_value = SparseGrid._convert_value_from_to_interval(
+                        value=temperature_value,
+                        from_start=t_min,
+                        from_end=t_max,
+                        to_start=0.0,
+                        to_end=1.0,
+                    )
+                new_temperature_data.append(temperature_value)
+            temperature_data = np.array(new_temperature_data)
 
         if "background_data" in z:
             background_data = z["background_data"]

@@ -48,7 +48,3 @@ class RenderParam:
     is_thermoxels: bool = True
     """If true Evaluator will evaluate thermoxels, if false, evaluate plenoxel with
     thermal images only"""
-
-    @property
-    def ckpt(self) -> Path:
-        return self.model_path / "ckpt.npz"
