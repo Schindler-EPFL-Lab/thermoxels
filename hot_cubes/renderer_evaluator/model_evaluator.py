@@ -90,7 +90,7 @@ class Evaluator:
             im_gt.cpu().numpy(), im.cpu().numpy(), channel_axis=2, data_range=1
         )
 
-        return mse_num, psnr, ssim
+        return float(mse_num), float(psnr), float(ssim)
 
     def compute_lpips(self, im: torch.Tensor, im_gt: torch.Tensor) -> float:
         lpips = self._lpips_vgg(
@@ -184,7 +184,7 @@ class Evaluator:
                 )
                 mlflow.log_artifact(vid_path, artifact_path="videos")
 
-    def save_metric(self, log_only: bool = False, prefix: str = "") -> None:
+    def save_metric(self, prefix: str = "") -> None:
         all_metrics = {
             "RGB psnr": self.psnr_list,
             "RGB ssim": self.ssim_list,
@@ -194,11 +194,19 @@ class Evaluator:
             "Thermal mae": self.thermal_mae_list,
             "Thermal mae_roi": self.thermal_mae_roi_list,
             "Thermal hssim": self.hssim_list,
+            "RGB psnr mean": statistics.fmean(self.psnr_list),
+            "RGB ssim mean": statistics.fmean(self.ssim_list),
+            "RGB lpips mean": statistics.fmean(self.lpips_list)
+            if self._param.lpips
+            else -1,
+            "Thermal psnr mean": statistics.fmean(self.thermal_psnr_list),
+            "Thermal ssim mean": statistics.fmean(self.thermal_ssim_list),
+            "Thermal mae mean": statistics.fmean(self.thermal_mae_list),
+            "Thermal mae_roi mean": statistics.fmean(self.thermal_mae_roi_list),
+            "Thermal hssim mean": statistics.fmean(self.hssim_list),
         }
-        mlflow.log_dict(all_metrics, str(self._param.metric_path / "metrics.json"))
-        if log_only:
-            return
-        with open(self._param.metric_path / "test_metric.json", "w") as file:
+        mlflow.log_dict(all_metrics, str(self._param.render_dir / "metrics.json"))
+        with open(self._param.metric_path / "metric.json", "w") as file:
             json.dump(all_metrics, file)
 
     def _compare_and_log_metrics(

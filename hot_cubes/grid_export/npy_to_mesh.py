@@ -16,7 +16,7 @@ from hot_cubes.svox2_temperature import SparseGrid
 
 def convert_to_hex8_mesh(
     ckpt_path: Path,
-    model_name_prefix="",
+    model_name_prefix: str = "",
     density_threshold: float = 22.0,
 ) -> None:
     """

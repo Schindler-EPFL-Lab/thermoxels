@@ -1,8 +1,6 @@
 import logging
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from pathlib import Path
-
-import mlflow
 
 
 @dataclass
@@ -145,7 +143,7 @@ class TrainingParam:
     nosphereinit: bool = True
     tv_sh_sparsity: float = 0.25
     tv_temp_sparsity: float = 0.1
-    t_loss: float = 0.001
+    t_loss: float = 0
     t_surface_loss: float = 0.0
     l1_loss: float = 0.0
 
@@ -185,13 +183,6 @@ class TrainingParam:
             raise RuntimeError("lr_temperature must be >= lr_temperature_final")
         if self.freeze_rgb_after > self.n_epoch:
             logging.warning("can only freeze after RGB training")
-
-        for key, value in asdict(self).items():
-            if value is not None:
-                try:  # Take in account that some values might already have been logged
-                    mlflow.log_param(key, value)
-                except mlflow.exceptions.RestException:
-                    pass
 
         Path(self.model_save_path).mkdir(parents=True, exist_ok=True)
 

@@ -1,6 +1,7 @@
 import json
 import shutil
 import sys
+from dataclasses import asdict
 from datetime import datetime
 from pathlib import Path
 
@@ -50,6 +51,8 @@ def train(param: TrainingParam) -> None:
         **config_util.build_data_options(param),
     )
 
+    assert param.data_dir is not None
+
     with open(Path(param.data_dir, "temperature_bounds.json")) as file:
         data = json.load(file)
     t_max = data["absolute_max_temperature"]
@@ -74,9 +77,14 @@ def train(param: TrainingParam) -> None:
         / (str(param.model_save_path.stem) + "_celsius"),
         new_scale="Celsius",
     )
-    convert_to_hex8_mesh(
-        param.model_save_path / (str(param.model_save_path.stem) + "_celsius")
-    )
+
+    for density in range(0, 100, 10):
+        convert_to_hex8_mesh(
+            ckpt_path=param.model_save_path
+            / (str(param.model_save_path.stem) + "_celsius"),
+            model_name_prefix=param.scene_name,
+            density_threshold=density,
+        )
 
     # Evaluate the model
     assert param.data_dir is not None
@@ -109,13 +117,19 @@ def train(param: TrainingParam) -> None:
     )
 
     evaluator = Evaluator(param=render_param, dataset=dataset_test)
-    evaluator.save_metric(log_only=True, prefix=param.model_save_path.stem)
+    evaluator.save_metric(prefix=param.model_save_path.stem)
 
     mlflow.log_metric("execution time", (datetime.now() - start_time).total_seconds())
 
 
 def main() -> None:
     param = tyro.cli(TrainingParam)
+    for key, value in asdict(param).items():
+        if value is not None:
+            try:  # Take in account that some values might already have been logged
+                mlflow.log_param(key, value)
+            except mlflow.exceptions.RestException:
+                pass
 
     torch.manual_seed(20200823)
     np.random.seed(20200823)
