@@ -94,9 +94,12 @@ and perform post filtering of the mesh, for instance with [Meshlab](https://www.
 You can generate gifs of already generated meshes using :
 
 ```bash
+export XDG_SESSION_TYPE=x11
 python hot_cubes/grid_export/generate_gif_of_mesh.py --obj-file-path {your_path.obj}
 --total-frames {n_frames}
 ```
+
+The export is needed because libdecor-gtk needs X11 still.
 
 This will generate a gif of the mesh rotating around the x axis.
 If needed, you can provide an initial rotation angle prior to the x-axis rotation.
