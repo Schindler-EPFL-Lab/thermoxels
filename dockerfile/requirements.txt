@@ -21,3 +21,5 @@ scikit-image
 torchmetrics
 mlflow
 azureml-mlflow
+meshio
+pyvista

@@ -68,12 +68,14 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 RUN apt-get update && apt-get install libopenblas-dev -y
-RUN python3.10 -m pip install torch==1.11.0+cu113 torchvision==0.12.0+cu113 torchaudio==0.11.0 --extra-index-url https://download.pytorch.org/whl/cu113
 
 # Created with pip freeze -l > requirements.txt
 COPY requirements.txt requirements.txt
 #RUN conda install conda-forge::cudatoolkit
 RUN python3.10 -m pip install -r requirements.txt
+
+RUN python3.10 -m pip install torch==1.11.0+cu113 torchvision==0.12.0+cu113 torchaudio==0.11.0 --extra-index-url https://download.pytorch.org/whl/cu113
+
 
 COPY plenoxels/ svox2
 RUN cd svox2 &&     TORCH_CUDA_ARCH_LIST="7.5+PTX" python3.10 -m pip install -e . && \
