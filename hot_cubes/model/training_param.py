@@ -49,7 +49,7 @@ class TrainingParam:
     background_reso: int = 1024
 
     # Optimization settings
-    n_epoch: int = 6
+    n_epoch: int = 1
     freeze_rgb_after: int = 10
     n_iters: int = 102400
     batch_size: int = 5000
@@ -119,10 +119,10 @@ class TrainingParam:
 
     # Losses and regularization
     lambda_tv: float = 0.005
-    tv_sparsity: float = 0.25
+    tv_sparsity: float = 0.01
     tv_logalpha: bool = False
     lambda_tv_sh: float = 5e-2
-    lambda_tv_temp: float = 1e-3
+    lambda_tv_temp: float = 1e-4
     lambda_tv_lumisphere: float = 0.0
     tv_lumisphere_sparsity: float = 0.01
     tv_lumisphere_dir_factor: float = 0.0
@@ -141,11 +141,11 @@ class TrainingParam:
     lr_decay: bool = True
     n_train: int | None = None
     nosphereinit: bool = True
-    tv_sh_sparsity: float = 0.25
-    tv_temp_sparsity: float = 0.1
+    tv_sh_sparsity: float = 0.01
+    tv_temp_sparsity: float = 0.01
     t_loss: float = 0
     t_surface_loss: float = 0.0
-    l1_loss: float = 0.0
+    l1_loss: float = 0.5
 
     # Rendering settings
     white_bkgd: bool = False

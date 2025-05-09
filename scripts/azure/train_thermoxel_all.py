@@ -54,11 +54,9 @@ SCENES = {
     ),
     "buildingA_winter": TrainingParam(
         scene_name="buildingA_winter",
-        scene_radius=3,
-        tv_sparsity=0.25,
-        tv_temp_sparsity=0.1,
-        tv_sh_sparsity=0.25,
-        t_loss=0.001,
+        scene_radius=7,
+        lambda_tv_temp=1e-3,
+        t_loss=0,
         n_epoch=10,
     ),
     "dorm1": TrainingParam(
@@ -75,11 +73,11 @@ SCENES = {
     ),
     "double_robot": TrainingParam(
         scene_name="double_robot",
-        scene_radius=1.5,
+        scene_radius=10,
         tv_sparsity=0.25,
         tv_temp_sparsity=0.1,
         tv_sh_sparsity=0.25,
-        t_loss=0.001,
+        t_loss=0,
         n_epoch=10,
     ),
     "exhibition_building": TrainingParam(
@@ -196,7 +194,7 @@ def main() -> None:
             "CUDA_LAUNCH_BLOCKING=1 python3.10 "
             "hot_cubes/cli/train_thermoxel_model.py "
             "--data_dir ${{inputs.data}} "
-            "--model-save-path ${{outputs.thermoxel_model}} "
+            "--model-save-path ${{outputs.outputs}} "
             "--n-epoch "
             + str(parameters.n_epoch)
             + " --t-loss "

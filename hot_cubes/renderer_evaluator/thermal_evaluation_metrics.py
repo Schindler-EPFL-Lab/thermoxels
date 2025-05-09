@@ -1,5 +1,7 @@
 import math
+import os
 
+import imageio
 import torch
 import torch.nn.functional as F
 from skimage.metrics import structural_similarity
@@ -67,11 +69,29 @@ def compute_hssim(
     return hssim_map
 
 
-def mae_thermal(gt, pred, threshold, cold_flag, max_temperature, min_temperature):
+def mae_thermal(
+    gt: torch.Tensor,
+    pred: torch.Tensor,
+    threshold: float,
+    cold_flag: bool,
+    max_temperature: float,
+    min_temperature: float,
+) -> torch.Tensor:
     if cold_flag:
         indices_foreground = torch.where(gt < threshold)
     else:
         indices_foreground = torch.where(gt > threshold)
+
+    # Save GT tensor as binarize image given threshold
+    gt_save = torch.zeros_like(gt)
+    gt_save[indices_foreground] = 1.0
+    git_save_as_numpy = gt_save.cpu().numpy()
+    gt_save_as_numpy = (git_save_as_numpy * 255).astype("uint8")
+
+    i = 0
+    while os.path.exists("outputs/sample%s.png" % i):
+        i += 1
+    imageio.imwrite("outputs/sample%s.png" % i, gt_save_as_numpy)
 
     gt = gt[indices_foreground]
     gt = gt * (max_temperature - min_temperature) + min_temperature
@@ -98,8 +118,7 @@ def compute_thermal_metric_maps(
     mae_roi_threshold: float,
     im_thermal: torch.Tensor,
     im_gt_thermal: torch.Tensor,
-) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
-
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, float, torch.Tensor]:
     mse_map = (im_thermal.cpu() - im_gt_thermal.cpu()) ** 2
 
     mae_map = mae_thermal(
@@ -130,7 +149,7 @@ def compute_thermal_metric_maps(
         full=True,
     )
 
-    return (mse_map, mae_map, mae_roi_map, hssim_map, tssim_map)
+    return mse_map, mae_map, mae_roi_map, hssim_map, tssim_map
 
 
 def compute_thermal_metrics(
@@ -139,8 +158,7 @@ def compute_thermal_metrics(
     mae_roi_threshold: float,
     im_thermal: torch.Tensor,
     im_gt_thermal: torch.Tensor,
-) -> tuple[float, float, float, float]:
-
+) -> tuple[float, float, float, float, float, float]:
     mse_map, mae_map, mae_roi_map, hssim_map, tssim_map = compute_thermal_metric_maps(
         t_min=t_min,
         t_max=t_max,

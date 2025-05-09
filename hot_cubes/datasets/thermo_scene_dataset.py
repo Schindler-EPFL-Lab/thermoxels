@@ -142,7 +142,7 @@ class ThermoSceneDataset(DatasetBase):
         self.h, self.w = self.h_full, self.w_full
         self.intrins = self.intrins_full
 
-    def get_intrinsic_parameters(self) -> float:
+    def get_intrinsic_parameters(self) -> tuple[float, float, float, float]:
         intrinsic_path = ThermoSceneDataset.find_json_structure(self.root)
 
         with open(intrinsic_path) as file:
@@ -153,7 +153,7 @@ class ThermoSceneDataset(DatasetBase):
 
         return fx, fy, cx, cy
 
-    def get_temperature_metadata(self) -> float:
+    def get_temperature_metadata(self) -> tuple[float, float]:
         metadat_path = self.root / Path("temperature_bounds.json")
 
         with open(metadat_path) as file:
