@@ -1,0 +1,515 @@
+---
+title: "Thermoxels"
+subtitle: "A voxel-based method to generate simulation-ready 3D thermal models"
+title-slide-attributes:
+  data-background-image: https://group.schindler.com/content/dam/website/group/images/image-gallery/schindler-torre-reforma-mexico-city-mexico.jpg/_jcr_content/renditions/original./schindler-torre-reforma-mexico-city-mexico.jpg
+  data-background-size: cover
+  data-background-opacity: "0.5"
+author:
+  - name: Etienne Chassaing
+    orcid: 0000-0000-0000-0000
+    email: cetiennec@yahoo.com
+    affiliations: EPFL
+  - name: Florent Forest
+    orcid: 0000-0000-0000-0000
+    email: florent.forest@epfl.ch
+    affiliations: EPFL
+  - name: Olga Fink
+    orcid: 0000-0000-0000-0000
+    email: olga.fink@epfl.ch
+    affiliations: EPFL
+  - name: Malcolm Mielle
+    orcid: 0000-0000-0000-0000
+    email: malcolm.mielle@schindler.com
+    affiliations: Schindler EPFL Lab
+bibliography: references.bib
+citations-hover: true
+csl: custom-for-presentation.csl
+format:
+    schindler-revealjs:
+      reference-location: block
+      transition: fade
+      # navigation-mode: linear
+      theme: [white]
+      pdf-separate-fragments: true
+css: custom.css
+---
+
+## {background-color="#ffffff" visibility="uncounted" transition="slide"}
+
+
+
+<script>
+  window.addEventListener("mousedown", handleClick, false);
+window.addEventListener("contextmenu", function(e) { e.preventDefault(); }, false);
+
+function handleClick(e) {
+    e.preventDefault();
+    if(e.button === 0) Reveal.next();
+    if(e.button === 2) Reveal.prev();
+}
+</script>
+
+
+::: {style="margin-top: 275px;"}
+<span style=" font-weight: bold; font-size: 60px; color:#dc0000;">Background</span>
+:::
+
+
+## Building (energy consumption) statistics
+
+:::: {.columns}
+
+::: {.column width="40%"}
+
+<ul>
+  <li class="fragment" data-fragment-index="2">85 to 95% still standing by 2050</li>
+<!-- <li class="fragment" data-fragment-index="3">58% built before 2000 (220 million building units)</li> -->
+<!-- <li class="fragment" data-fragment-index="4">11% with some renovation</li> -->
+<li class="fragment" data-fragment-index="3">Weighted annual energy renovation rate: 1%</li>
+<li class="fragment" data-fragment-index="4">0.2% deep renovation</li>
+</ul>
+
+::: {.fragment}
+Need tools for targeting and monitoring of renovations.
+:::
+
+::: {.fragment}
+Finite Element Analysis (FEA)
+:::
+
+::: {.incremental}
+* Tedious and error-prone modeling
+:::
+
+:::
+
+::: {.column width="60%"}
+
+
+::: {.r-stack}
+
+::: {data-id="box1" style="background: #0077FFF3; width: 400px; height: 400px;"}
+:::
+
+<div class="fragment" data-fragment-index="2">
+::: {data-id="box2" style="background: #40B618AB; width: 380px; height: 380px;"}
+:::
+</div>
+<!-- 
+<div class="fragment" data-fragment-index="3">
+::: {data-id="box3" style="background: #E83E8DAE; width: 232px; height: 232px;"}
+:::
+</div>-->
+
+<!-- <div class="fragment" data-fragment-index="4">
+::: {data-id="box3" style="background: #D4FF00FF; width: 44px; height: 44px;"}
+:::
+</div>  -->
+
+<div class="fragment" data-fragment-index="3">
+::: {data-id="box3" style="background: #CC00FFFF; width: 4px; height: 4px;"}
+:::
+</div>
+
+<div class="fragment" data-fragment-index="4">
+::: {data-id="box3" style="background: #000000FF; width: 1px; height: 1px;"}
+:::
+</div>
+
+
+:::
+
+:::
+
+::::
+
+<!-- ## Existing renovation strategies
+
+::: {.incremental}
+* Lump parameter based models
+  * Fast
+  * Less accurate
+* Finite Element Analysis (FEA)
+  * Tedious and error-prone modeling
+::: -->
+
+
+<!-- ## {transition="zoom-in" auto-animate="true"}
+
+::: {style="margin-top: 275px;"}
+<span style=" font-weight: bold; font-size: 40px; color:#dc0000;">Research Hypothesis</span>
+:::
+
+## {auto-animate="true"}
+
+::: {style="margin-top: 200px;"}
+<span style=" font-weight: bold; font-size: 40px; color:#dc0000;">Research Hypothesis</span>
+:::
+
+It is possible to use computer vision to simplify the generation of volumetric 3D models for Finite-Element Analysis (FEA). -->
+
+
+## {background-color="#ffffff" visibility="uncounted" transition="slide"}
+
+
+
+::: {style="margin-top: 125px;"}
+<span style=" font-weight: bold; font-size: 60px; color:#dc0000;">Aim</span>
+:::
+
+::: {.fragment}
+Simplify data collection for building renovation
+:::
+
+::: {.fragment style="margin-top: 75px;"}
+<span style=" font-weight: bold; font-size: 60px; color:#dc0000;">Research Question</span>
+:::
+
+::: {.fragment}
+Is it possible to use computer vision to simplify the generation of volumetric 3D models for Finite-Element Analysis (FEA)?
+:::
+
+
+
+
+## Existing 3D RGB+Thermal reconstruction
+
+
+:::: {.columns}
+
+::: {.column width="50%"}
+
+Take a sparse set of images of a building and estimate <span class="fragment" data-fragment-index="1"> RGB</span><span class="fragment" data-fragment-index="2"> and Thermal</span>
+
+<ul>
+  <li class="fragment" data-fragment-index="3"> NeRF for building facade novel view synthesis^[@hassan2025Thermo] <span class="fragment" data-fragment-index="4">- <em>No 3D model</em></span></li>
+  <li class="fragment" data-fragment-index="5"> Thermal Gaussian Splatting^[@10.1007/978-3-031-73383-3_15] <span class="fragment" data-fragment-index="6">- <em>Poorly defined interfaces between elements</em></span></li>
+  <li class="fragment" data-fragment-index="7"> Plenoxel^[@fridovich2022plenoxels] <span class="fragment" data-fragment-index="8">- <em>No thermal modality</em></span></li>
+</ul>
+
+::: {.fragment}
+<span style=" font-weight: bold; color:#dc0000;">Not possible to simulate using FEA</span>
+:::
+
+:::
+
+
+::: {.column width="50%"}
+
+::: {.fragment fragment-index=1 .fade-in}
+![](../images/synthesized_video_rgb_facade.gif){width="300" style="height: auto;"}
+:::
+
+::: {.fragment fragment-index=2 .fade-in}
+![](../images/LES-thermonerf.gif){width="300" style="height: auto;"}
+:::
+
+:::
+
+::::
+
+
+## {background-color="#fffff" visibility="uncounted" transition="slide"}
+
+::: {style="margin-top: 275px;"}
+<span style=" font-weight: bold; font-size: 60px; color:#dc0000;">Thermoxels</span>
+:::
+
+::: {.fragment}
+First method to convert sparse set of RGB+Thermal images to a Volumetric mesh compatible with FEA
+:::
+<!-- 
+## Thermoxels
+
+First method to convert sparse set of RGB+Thermal images to a Volumetric mesh compatible with FEA:
+
+::: {.incremental}
+* Voxel based representation including RGB and Thermal data
+* Threshold based filtering of voxels
+* Evaluation over 5 different scenes
+::: -->
+
+<!-- ## {transition="zoom-in"}
+<h1 class="h1-section">How?</h1> -->
+
+## Pose extraction {auto-animate="true"}
+
+![](../images/thermoxels1.png){width="900" style="height: auto;"}
+
+```python
+# Find poses on RGB with COLMAP
+poses = COLMAP(images_rgb)
+```
+
+## Voxel optimization {auto-animate=true}
+
+![](../images/thermoxels2.png){width="900" style="height: auto;"}
+
+```{.python code-line-numbers="2-7"}
+poses = COLMAP(images_rgb)
+# optimize color and temperature on voxels
+thermoxels = Voxels(scene_size)
+while i <= max_iteration:
+  rgb, temperature = thermoxels(images_rgb, images_thermal, poses)
+  loss = Loss(rgb, temperature, rgb_gt, temperature_gt)
+  thermoxels.optimize(loss)
+```
+
+## Voxel optimization {auto-animate=true}
+
+<div class="fragment fade-out" data-fragment-index="1">
+![](../images/progress1.png){.absolute top=50 left=-50 width="900" style="height: auto;"}
+</div>
+<div class="fragment fade-in-then-out" data-fragment-index="1">
+![](../images/progress2.png){.absolute top=50 left=-50 width="900" style="height: auto;"}
+</div>
+<div class="fragment fade-in-then-out" data-fragment-index="2">
+![](../images/progress3.png){.absolute top=50 left=-50 width="900" style="height: auto;"}
+</div>
+<div class="fragment fade-in-then-out" data-fragment-index="3">
+![](../images/progress4.png){.absolute top=50 left=-50 width="900" style="height: auto;"}
+</div>
+<div class="fragment fade-in-then-out" data-fragment-index="4">
+![](../images/progress5.png){.absolute top=50 left=-50 width="900" style="height: auto;"}
+</div>
+<div class="fragment fade-in-then-out" data-fragment-index="5">
+![](../images/progress6.png){.absolute top=50 left=-50 width="900" style="height: auto;"}
+</div>
+<div class="fragment fade-in" data-fragment-index="6">
+![](../images/progress7.png){.absolute top=50 left=-50 width="900" style="height: auto;"}
+</div>
+
+<!-- :::: {.columns}
+
+::: {.column width="60%"}
+
+
+:::
+
+::: {.column width="40%"}
+
+::: {.incremental}
+* Voxels are squares in space
+* Project rays in space from pixels
+* Sample along the ray
+* Render RGB and Thermal images
+* Loss:
+:::
+
+
+
+::: {.fragment}
+$$
+  L^{\text{rgb}} = L_2^{\text{rgb}} + \lambda_{\text{TV}}^{\text{rgb}} L_{\text{TV}}^{\text{rgb}}
+$$
+:::
+
+::: {.fragment}
+$$
+  L^T = (1 - \lambda) L_1^{\text{T}} + \lambda_\text{TV}^{\text{T}}L_\text{TV}^{\text{T}}
+$$
+:::
+::: {.fragment}
+$$
+  L = L^{\text{rgb}} + L^T
+$$
+:::
+
+::: {.fragment}
+with $\lambda = \frac{1}{2}$
+:::
+
+
+:::
+::::: -->
+
+
+## Voxel optimization {auto-animate=true}
+
+![](../images/thermoxels2.png){width="900" style="height: auto;"}
+
+```{.python code-line-numbers="2-7"}
+poses = COLMAP(images_rgb)
+# optimize color and temperature on voxels
+thermoxels = Voxels(scene_size)
+while i <= max_iteration:
+  rgb, temperature = thermoxels(images_rgb, images_thermal, poses)
+  loss = Loss(rgb, temperature, rgb_gt, temperature_gt)
+  thermoxels.optimize(loss)
+```
+
+
+## Volumetric Mesh Extraction {auto-animate="true"}
+
+![](../images/thermoxels3.png){width="900" style="height: auto;"}
+
+```{.python code-line-numbers="7-8"}
+poses = COLMAP(images_rgb)
+thermoxels = Voxels(scene_size)
+while i <= max_iteration:
+  rgb, temperature = thermoxels(images_rgb, images_thermal, poses)
+  loss = Loss(rgb, temperature, rgb_gt, temperature_gt)
+  thermoxels.optimize(loss)
+# Reconstruct thermal volumetric mesh
+vol_mesh, surface_temperature = filtering(voxels, threshold)
+```
+
+
+## Finite-Element Analysis {auto-animate="true"}
+
+![](../images/thermoxels.png){width="900" style="height: auto;"}
+
+```{.python code-line-numbers="9-10"}
+poses = COLMAP(images_rgb)
+thermoxels = Voxels(scene_size)
+while i <= max_iteration:
+  rgb, temperature = thermoxels(images_rgb, images_thermal, poses)
+  loss = Loss(rgb, temperature, rgb_gt, temperature_gt)
+  thermoxels.optimize(loss)
+vol_mesh, surface_temperature = filtering(voxels, threshold)
+# Run FEA simulation
+simulation = FEA(vol_mesh, surface_temperature, env_conditions)
+```
+
+
+## {background-color="#fffff" visibility="uncounted" transition="slide"}
+
+::: {style="margin-top: 275px;"}
+<span style=" font-weight: bold; font-size: 60px; color:#dc0000;">Results</span>
+:::
+
+
+
+## Reconstruction Metrics
+
+<!-- ![](images/metrics.png) -->
+
+```{python}
+#| label: fig-psnr
+#| fig-cap: "PSNR"
+import pandas as pd
+from IPython.display import HTML
+import numpy as np
+
+# Step 1: Create a dictionary of lists
+data = pd.read_csv('psnr.csv', keep_default_na=False)
+
+
+# Step 2: Convert the dictionary to a DataFrame
+df = pd.DataFrame(data)
+
+def highlight_max(s, props=''):
+    return np.where(s == np.nanmax(s.values), props, '')
+
+df = df.round(decimals=2)
+df_s = df.style.hide()
+df_s.format(precision=2)
+# df_s = df_s.apply(highlight_max, props='font-weight: 70', axis=0)
+df_s
+```
+
+::: {.fragment}
+```{python}
+#| label: fig-ssim
+#| fig-cap: "SSIM"
+import pandas as pd
+from IPython.display import HTML
+
+# Step 1: Create a dictionary of lists
+data = pd.read_csv('ssim.csv', keep_default_na=False, header=None)
+
+# Step 2: Convert the dictionary to a DataFrame
+df = pd.DataFrame(data)
+
+df_s = df.style.hide()
+df_s.format(precision=2)
+df_s = df_s.hide(axis=1)
+
+# df_s = df_s.apply(highlight_max, props='font-weight: 70', axis=0)
+df_s
+```
+:::
+
+
+::: {.fragment}
+```{python}
+#| label: fig-mae
+#| fig-cap: "MAE"
+import pandas as pd
+from IPython.display import HTML
+
+# Step 1: Create a dictionary of lists
+data = pd.read_csv('mae.csv', keep_default_na=False, header=None)
+
+# Step 2: Convert the dictionary to a DataFrame
+df = pd.DataFrame(data)
+
+df_s = df.style.hide()
+df_s.format(precision=2)
+df_s = df_s.hide(axis=1)
+
+# df_s = df_s.apply(highlight_max, props='font-weight: 70', axis=0)
+df_s
+```
+:::
+
+
+## Simulation ready models
+
+
+![](images/no_plenoxel_results.png){.absolute top=150 left=20 width="1000" style="height: auto;"}
+
+::: {.fragment .fade-in-then-out}
+![](images/thermoxels_results1.png){.absolute top=150 left=20 width="1000" style="height: auto;"}
+:::
+
+::: {.fragment .fade-in}
+![](images/thermoxels_results2.png){.absolute top=150 left=20 width="1000" style="height: auto;"}
+
+::: {style="margin-top: 500px; margin-left: 275px"}
+**Thermoxels temperature as initial condition**
+:::
+
+:::
+
+
+## Conclusion and Future Work
+
+
+::: {.incremental}
+* First method to build 3D models compatible with FEA using sparse RGB images.
+* Metric do not capture mesh quality.
+
+* Future works:
+  * Improve surface approximation.
+  * Integrate material properties.
+:::
+
+## Conclusion
+
+
+<div class="fragment fade-out" data-fragment-index="1">
+![](../images/simulation/1.png){.absolute top=0 left=200 width="600" style="height: auto;"}
+</div>
+<div class="fragment fade-in-then-out" data-fragment-index="1">
+![](../images/simulation/2.png){.absolute top=0 left=200 width="600" style="height: auto;"}
+</div>
+<div class="fragment fade-in-then-out" data-fragment-index="2">
+![](../images/simulation/3.png){.absolute top=0 left=200 width="600" style="height: auto;"}
+</div>
+<div class="fragment fade-in-then-out" data-fragment-index="3">
+![](../images/simulation/4.png){.absolute top=0 left=200 width="600" style="height: auto;"}
+</div>
+<div class="fragment fade-in-then-out" data-fragment-index="4">
+![](../images/simulation/5.png){.absolute top=0 left=200 width="600" style="height: auto;"}
+</div>
+<div class="fragment fade-in-then-out" data-fragment-index="5">
+![](../images/simulation/6.png){.absolute top=0 left=200 width="600" style="height: auto;"}
+</div>
+<div class="fragment fade-in" data-fragment-index="6">
+![](../images/simulation/7.png){.absolute top=0 left=200 width="600" style="height: auto;"}
+</div>
+
+
+## References

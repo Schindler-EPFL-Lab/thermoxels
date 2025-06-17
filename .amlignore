@@ -1,0 +1,11 @@
+.egg-info
+__pycache__/
+.git
+.forgejo
+.vscode
+.venv
+/tests
+/outputs
+/mlruns
+/models
+/images

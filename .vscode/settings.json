@@ -30,4 +30,8 @@
         "info",
         "hint"
     ],
+    "latex-workshop.formatting.latex": "latexindent",
+    "[latex]": {
+        "editor.defaultFormatter": "james-yu.latex-workshop"
+    },
 }

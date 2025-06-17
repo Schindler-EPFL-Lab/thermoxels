@@ -1,0 +1,43 @@
+.h1-section {
+    text-align: center;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 20px;
+    border: none;
+    outline: none;
+    text-align: center;
+}
+
+th,
+td {
+    padding: 10px;
+    border-collapse: collapse;
+    border: none;
+    outline: none;
+    background-color: #ffeeee49;
+    text-align: center;
+}
+
+tr {
+    border: none;
+    outline: none;
+}
+
+
+th {
+    background-color: #dc0000;
+    color: white;
+    text-align: center;
+}
+
+tr:nth-child(3n) {
+    background-color: #dc000049;
+}
+
+/*
+tr:hover {
+    background-color: #dc000049;
+}*/

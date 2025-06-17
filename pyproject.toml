@@ -46,6 +46,9 @@ fem = [
    "trimesh>=4.5.3",
    "petsc4py>=3.22.2",
 ]
+docs = [
+    "jupyter>=1.1.1",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["plenoxels", "thermoxels", "thermoxel_fem"]

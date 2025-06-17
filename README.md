@@ -12,7 +12,7 @@ Thermoxels is for you!
 
 ![Summary of the method](images/thermoxels_pipeline.png)
 
-<img src="images/animation.gif" alt="Example gif" style="transform: rotate(180deg);">
+<img src="images/simulation.gif" alt="A mesh built using thermoxels is used for FEA simulation.">
 
 Thermoxels a voxel-based representation of the scene, where each voxel is associated with a density, a temperature and a color.
 We learn a view independent temperature on the foreground object.
@@ -27,7 +27,8 @@ See the original [paper](https://www.sciencedirect.com/science/article/abs/pii/S
 Install with uv:
 
 ```bash
-uv sync
+export PEP517_BUILD_BACKEND=setuptools.build_meta
+uv sync --all-extras
 ```
 
 Thermoxels was tested with PyTorch `1.11.0+cu113` and torchvision `0.12.0+cu113`.
