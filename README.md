@@ -1,6 +1,6 @@
 # Thermoxels: Learn multimodal 3D models with Thermal Voxels
 
-This paper was accepted as an oral presentation at CISBAT 20205.
+This paper was accepted as an oral presentation at CISBAT 2025.
 
 [PDF](https://arxiv.org/abs/2504.04448), [Cite us](thermoxels.bib)
 
