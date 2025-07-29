@@ -1,5 +1,9 @@
 # Thermoxels: Learn multimodal 3D models with Thermal Voxels
 
+This paper was accepted as an oral presentation at CISBAT 20205.
+
+[PDF](https://arxiv.org/abs/2504.04448), [Cite us](thermoxels.bib)
+
 ## Introduction
 
 ![Summary of the method](images/thermoxels_pipeline.png)
@@ -16,7 +20,7 @@ performed with few thermal images compare to RGB ones.
 
 ## Dataset
 
-We complete [ThermoScenes](<https://zenodo.org/records/10835108>? token=eyJhbGciOiJIUzUxMiJ9.eyJpZCI6IjhlOWI4MTVmLWZlOGUtNDA0Mi1hMWE1LWM5OWYwODE1MjNkNSIsImRhdGEiOnt9LCJyYW5kb20iOiI3NDUwNzM3ZjAxNTlkZWVjNzI1NWY0MmYyMTQxMzdkMyJ9.3Ga9svyICCtX8FwVOWx0NSCx8AHzjb-aqbO1VRLVfUf_CK6fp7sPz2WopezuH3iPxrTag7ivoG1p56ND1eNpVg),
+We complete [ThermoScenes](https://zenodo.org/records/15609062),
 with three new scenes including reflections. On one of them called shiny tablet, we
 removed reflections on the eval set to evaluate model's ability to effectively
 suppress reflections.
