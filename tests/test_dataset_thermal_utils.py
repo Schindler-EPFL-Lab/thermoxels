@@ -4,7 +4,7 @@ import numpy as np
 from numpy.testing import assert_almost_equal
 from PIL import Image as PILImage
 
-from hot_cubes.datasets.datasets_utils.rescale_thermal_images import (
+from thermoxels.datasets.datasets_utils.rescale_thermal_images import (
     scale,
     scale_image,
     scale_test_to_train,

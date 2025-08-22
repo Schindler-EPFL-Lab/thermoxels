@@ -10,7 +10,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
-from hot_cubes.datasets.thermal_util import ThermalRays
+from thermoxels.datasets.thermal_util import ThermalRays
 from plenoxels.opt.util.dataset_base import DatasetBase
 from plenoxels.opt.util.util import Intrin, similarity_from_cameras
 

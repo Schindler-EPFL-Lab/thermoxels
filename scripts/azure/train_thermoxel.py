@@ -7,7 +7,7 @@ from azure.ai.ml import Input, Output, command
 from azure.ai.ml.constants import AssetTypes, InputOutputModes
 from azure_ml_utils.azure_connect import get_client
 
-from hot_cubes.model.training_param import TrainingParam
+from thermoxels.model.training_param import TrainingParam
 
 
 def get_data_path_and_thermoscenes_id(
@@ -95,7 +95,7 @@ def main() -> None:
 
     cmd = (
         "CUDA_LAUNCH_BLOCKING=1 python3.10 "
-        "hot_cubes/cli/train_thermoxel_model.py "
+        "thermoxels/cli/train_thermoxel_model.py "
         "--data_dir ${{inputs.data}} "
         "--model-save-path ${{outputs.thermoxel_model}} "
         "--n-epoch "

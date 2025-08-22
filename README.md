@@ -47,17 +47,17 @@ To train and evaluate Thermoxels, first download Thermoscenes and then use the f
 scripts
 
 ```bash
-python hot_cubes/cli/train_thermoxel_model.py --data_dir
+python thermoxels/cli/train_thermoxel_model.py --data_dir
 {data_dir} --train_dir {train_dir} --n_epoch  {n_epoch} --scene-radius {radius}
 ```
 
-All the training params are in the `hot_cubes/model/training_param.py` and can be modified with the CLI arguments.
+All the training params are in the `thermoxels/model/training_param.py` and can be modified with the CLI arguments.
 Adding `CUDA_LAUNCH_BLOCKING=1` before python launch can sometimes mitigate some cuda issues.
 
 E.g.
 
 ```bash
-CUDA_LAUNCH_BLOCKING=1 python hot_cubes/cli/train_thermoxel_model.py --data_dir dataset/dataset_name --train_dir training/ --n_epoch  10 --scene-radius 10
+CUDA_LAUNCH_BLOCKING=1 python thermoxels/cli/train_thermoxel_model.py --data_dir dataset/dataset_name --train_dir training/ --n_epoch  10 --scene-radius 10
 ```
 The model will be saved both in Kelvin and Celsius in `param.model_save_path / (str(param.model_save_path.stem) + "_kelvin"` and `param.model_save_path / (str(param.model_save_path.stem) + "_celsius"` respectively.
 
@@ -66,7 +66,7 @@ The model will be saved both in Kelvin and Celsius in `param.model_save_path / (
 You can export a mesh from the trained model using the following script:
 
 ```bash
-python hot_cubes/grid_export/grid_to_stl.py --npz-file ckpt.npz --put-colors --percentile-threshold 90
+python thermoxels/grid_export/grid_to_stl.py --npz-file ckpt.npz --put-colors --percentile-threshold 90
 ```
 
 This will save the mesh in obj format in the same folder as the npz file.
@@ -74,13 +74,13 @@ Color is derived from the temperature of the voxels using a colormap and the per
 Filtering of the mesh is natively done, keeping only the largest connected component of the mesh.
 If your foreground object vanishes when exporting, turn this option off and perform post filtering of the mesh, for instance with [Meshlab](https://www.meshlab.net/).
 
-## Generate gif of mesh
+### Generate gif of mesh
 
 You can generate gifs of already generated meshes using :
 
 ```bash
 export XDG_SESSION_TYPE=x11
-python hot_cubes/grid_export/generate_gif_of_mesh.py --obj-file-path {your_path.obj}
+python thermoxels/grid_export/generate_gif_of_mesh.py --obj-file-path {your_path.obj}
 --total-frames {n_frames}
 ```
 

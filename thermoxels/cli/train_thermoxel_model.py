@@ -11,18 +11,18 @@ import torch
 import tyro
 
 sys.path.append(".")
-sys.path.append("./hot_cubes")
+sys.path.append("./thermoxels")
 
-from hot_cubes.datasets.datasets_utils.colmap_json_to_txt import (
-    convert_colmap_json_to_txt,
-)
-from hot_cubes.grid_export.npy_to_mesh import convert_to_hex8_mesh
-from hot_cubes.model.thermoxel_trainer import ThermoxelTrainer  # noqa: E402
-from hot_cubes.model.training_param import TrainingParam  # noqa: E402
-from hot_cubes.renderer_evaluator.model_evaluator import Evaluator
-from hot_cubes.renderer_evaluator.render_param import RenderParam
 from plenoxels.opt.util import config_util  # noqa: E402
 from plenoxels.opt.util.dataset import datasets  # noqa: E402
+from thermoxels.datasets.datasets_utils.colmap_json_to_txt import (
+    convert_colmap_json_to_txt,
+)
+from thermoxels.grid_export.npy_to_mesh import convert_to_hex8_mesh
+from thermoxels.model.thermoxel_trainer import ThermoxelTrainer  # noqa: E402
+from thermoxels.model.training_param import TrainingParam  # noqa: E402
+from thermoxels.renderer_evaluator.model_evaluator import Evaluator
+from thermoxels.renderer_evaluator.render_param import RenderParam
 
 
 def train(param: TrainingParam) -> None:

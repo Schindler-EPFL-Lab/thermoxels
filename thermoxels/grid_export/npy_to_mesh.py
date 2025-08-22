@@ -11,7 +11,7 @@ import pyvista
 import pyvista.examples
 import tyro
 
-from hot_cubes.svox2_temperature import SparseGrid
+from thermoxels.svox2_temperature import SparseGrid
 
 
 def convert_to_hex8_mesh(

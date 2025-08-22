@@ -10,11 +10,11 @@ import numpy as np
 import torch
 from skimage.metrics import structural_similarity
 
-import hot_cubes.svox2_temperature as svox2
-from hot_cubes.datasets.thermo_scene_dataset import ThermoSceneDataset
-from hot_cubes.model.thermoxel_trainer import ThermoxelTrainer
-from hot_cubes.renderer_evaluator.render_param import RenderParam
-from hot_cubes.renderer_evaluator.thermal_evaluation_metrics import (
+import thermoxels.svox2_temperature as svox2
+from thermoxels.datasets.thermo_scene_dataset import ThermoSceneDataset
+from thermoxels.model.thermoxel_trainer import ThermoxelTrainer
+from thermoxels.renderer_evaluator.render_param import RenderParam
+from thermoxels.renderer_evaluator.thermal_evaluation_metrics import (
     compute_thermal_metrics,
 )
 

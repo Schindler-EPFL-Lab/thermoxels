@@ -3,7 +3,7 @@ import unittest
 
 import numpy as np
 
-from hot_cubes.datasets.thermo_scene_dataset import ThermoSceneDataset
+from thermoxels.datasets.thermo_scene_dataset import ThermoSceneDataset
 
 sys.path.append("./plenoxels")  # Avoid having to install plenoxel on GPU-less machines
 from plenoxels.opt.util.dataset import datasets  # noqa: E402

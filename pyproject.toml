@@ -11,7 +11,6 @@ requires-python = ">=3.10"
 keywords = []
 authors = []
 dependencies = [
-   "tyro >= 0.8.8",
    "meshio >= 5.3.5",
    "pyvista >= 0.44.1",
    "mlflow >= 2.16.0",
@@ -21,13 +20,20 @@ dependencies = [
    "scikit-image>=0.25.2",
    "opencv-python>=4.11.0.86",
    "torch>=2.6.0",
+   "tyro>=0.9.3",
+   "dataclasses-reverse-cli>=0.0.5",
 ]
 
 [project.optional-dependencies]
-azure = ["azure-ml-utils"]
+azure = [
+   "azure-ai-ml>=1.25.0",
+   "azureml-mlflow>=1.59.0.post1",
+   "debugpy>=1.8.12",
+]
+azure-local = ["azure-ml-utils", "azure-cli>=2.76.0"]
 
 [tool.hatch.build.targets.wheel]
-packages = ["plenoxels"]
+packages = ["plenoxels", "thermoxels"]
 
 [tool.isort]
 profile = "black"
@@ -90,3 +96,8 @@ docstring-code-format = true
 # This only has an effect when the `docstring-code-format` setting is
 # enabled.
 docstring-code-line-length = "dynamic"
+
+
+[tool.basedpyright]
+typeCheckingMode = "standard"
+deprecateTypingAliases = true

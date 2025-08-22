@@ -3,7 +3,7 @@ from pathlib import Path
 
 import numpy as np
 
-from hot_cubes.datasets.datasets_utils.colmap_json_to_txt import (
+from thermoxels.datasets.datasets_utils.colmap_json_to_txt import (
     convert_colmap_json_to_txt,
 )
 

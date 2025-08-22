@@ -7,7 +7,7 @@ import torch
 from skimage import data
 
 sys.path.append("./plenoxels")  # Avoid having to install plenoxel on GPU-less machines
-from hot_cubes.renderer_evaluator.model_evaluator import Evaluator  # noqa: E402
+from thermoxels.renderer_evaluator.model_evaluator import Evaluator  # noqa: E402
 
 
 class TestMetricsComparator(unittest.TestCase):

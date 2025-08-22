@@ -10,15 +10,15 @@ import torch.cuda
 import torch.optim
 from tqdm import tqdm
 
-import hot_cubes.svox2_temperature as svox2
-from hot_cubes.datasets.thermo_scene_dataset import ThermoSceneDataset
-from hot_cubes.model.training_param import TrainingParam
-from hot_cubes.renderer_evaluator.thermal_evaluation_metrics import (
+import thermoxels.svox2_temperature as svox2
+from plenoxels.opt.util import config_util
+from plenoxels.opt.util.util import get_expon_lr_func, viridis_cmap
+from thermoxels.datasets.thermo_scene_dataset import ThermoSceneDataset
+from thermoxels.model.training_param import TrainingParam
+from thermoxels.renderer_evaluator.thermal_evaluation_metrics import (
     compute_psnr,
     compute_thermal_metric_maps,
 )
-from plenoxels.opt.util import config_util
-from plenoxels.opt.util.util import get_expon_lr_func, viridis_cmap
 
 
 class ThermoxelTrainer:
@@ -551,16 +551,14 @@ class ThermoxelTrainer:
                     mse_rgb_img = all_mses_rgb / all_mses_rgb.max()
                     mlflow.log_image(
                         np.array(mse_rgb_img),
-                        f"{output_folder}/val_mse_image" f"_{img_id:04d}.png",
+                        f"{output_folder}/val_mse_image_{img_id:04d}.png",
                     )
 
                     mse_thermal = thermal_mse_map / thermal_mse_map.max()
 
                     mlflow.log_image(
                         np.array(mse_thermal),
-                        f"{output_folder}/val_mse_thermal_image"
-                        f""
-                        f"_{img_id:04d}.png",
+                        f"{output_folder}/val_mse_thermal_image_{img_id:04d}.png",
                     )
                 if self._param.log_mae_image:
                     mae_map = thermal_mae_map / thermal_mae_map.max()
@@ -624,7 +622,9 @@ class ThermoxelTrainer:
         return mse_map, mse_num, psnr
 
     @staticmethod
-    def _update_rgb_stats(rgb_mse: float, rgb_psnr: float, stats: dict[float]) -> None:
+    def _update_rgb_stats(
+        rgb_mse: float, rgb_psnr: float, stats: dict[str, float]
+    ) -> None:
         for stat_name in stats:
             if stat_name.endswith("rgb_mse"):
                 stats[stat_name] += rgb_mse
@@ -641,7 +641,7 @@ class ThermoxelTrainer:
         tssim: float | None,
         mae: float,
         mae_roi: float | None,
-        stats: dict[float],
+        stats: dict[str, float],
     ) -> None:
         for stat_name in stats:
             if stat_name.endswith("thermal_mse"):

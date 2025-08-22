@@ -1,7 +1,7 @@
 import unittest
 import torch
-from hot_cubes.datasets.thermo_scene_dataset import ThermoSceneDataset
-from hot_cubes.datasets.thermal_util import ThermalRays
+from thermoxels.datasets.thermo_scene_dataset import ThermoSceneDataset
+from thermoxels.datasets.thermal_util import ThermalRays
 from pathlib import Path
 
 

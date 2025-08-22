@@ -14,10 +14,10 @@ Then to generate the poses, follow thes instrauction bellow.
 
 ## Generate poses
 
-To generate a `pose` folder from `transform.json` file, use the script `colmap_json_to_txt.py` from the repository [Thermal Voxel](https://github.com/SchindlerEPFL/thermal-voxel/blob/main/hot_cubes/datasets/datasets_utils/colmap_json_to_txt.py), with `folder` being the path to the folder of images with transforms.json:
+To generate a `pose` folder from `transform.json` file, use the script `colmap_json_to_txt.py` from the repository [Thermal Voxel](https://github.com/SchindlerEPFL/thermal-voxel/blob/main/thermoxels/datasets/datasets_utils/colmap_json_to_txt.py), with `folder` being the path to the folder of images with transforms.json:
 
 ```bash
-python thermal_voxel/hot_cubes/datasets/datasets_utils/colmap_json_to_txt.py --folder <folder>
+python thermoxels/datasets/datasets_utils/colmap_json_to_txt.py --folder <folder>
 ```
 
 Finally follow the instruction  given by [Rebel NeRF](https://github.com/SchindlerEPFL/rebel-nerf/blob/main):

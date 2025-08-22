@@ -5,8 +5,8 @@ import imageio.v2 as imageio
 import numpy as np
 import torch
 
-from hot_cubes.renderer_evaluator.thermal_evaluation_metrics import compute_hssim
-from hot_cubes.renderer_evaluator.thermal_evaluation_metrics import uniform_filter_fn
+from thermoxels.renderer_evaluator.thermal_evaluation_metrics import compute_hssim
+from thermoxels.renderer_evaluator.thermal_evaluation_metrics import uniform_filter_fn
 
 
 class TestHssim(unittest.TestCase):
