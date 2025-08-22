@@ -35,6 +35,23 @@ See PyTorch installation instructions [here](https://pytorch.org/get-started/pre
 
 To install Thermoxels on a container environment, you can use our provided Dockerfile in the dockerfile folder.
 
+### FEM
+
+To install the FEM dependencies one need BLAS and Lapack:
+
+```
+sudo apt install libblas-dev liblapack-dev petsc-dev
+```
+
+Install with uv and extra fem flag:
+
+```bash
+export PEP517_BUILD_BACKEND=setuptools.build_meta
+uv sync --extra fem
+```
+
+It is importnt to export the flag above due to [this issue](https://github.com/astral-sh/uv/issues/10052).
+
 ## Train and Evaluate
 
 ### Azure
@@ -88,6 +105,12 @@ The export is needed because libdecor-gtk needs X11 still.
 
 This will generate a gif of the mesh rotating around the x axis.
 If needed, you can provide an initial rotation angle prior to the x-axis rotation.
+
+## Simulation
+
+Download your model as a npz file expressed in Kelvin (it should be saved at the end of training in both Celsius and Kelvin).
+Then the simulaiton can be run using [jaxfem](https://github.com/deepmodeling/jax-fem) with the command `python thermoxels_fem/cli/run_thermal_simple_regions_simulation_from_ckpt.py --num-steps <X> --input-dir <folder with ckpt file> --output-dir <folder for outputs> --dt 1e-5 --ckpt-npz-filepath <checkpoint file of the model>`
+
 
 ## Contribute
 

@@ -31,9 +31,24 @@ azure = [
    "debugpy>=1.8.12",
 ]
 azure-local = ["azure-ml-utils", "azure-cli>=2.76.0"]
+fem = [
+   "fenics-basix>=0.9.0",
+   "gmsh>=4.13.1",
+   "jax-fem",
+   "jax>=0.4.38",
+   "meshio>=5.3.5",
+   "mlflow>=2.19.0",
+   "petsc>=3.22.1",
+   "pyfiglet>=1.0.2",
+   "pymeshfix>=0.17.0",
+   "scikit-image>=0.25.0",
+   "tetgen>=0.6.5",
+   "trimesh>=4.5.3",
+   "petsc4py>=3.22.2",
+]
 
 [tool.hatch.build.targets.wheel]
-packages = ["plenoxels", "thermoxels"]
+packages = ["plenoxels", "thermoxels", "thermoxel_fem"]
 
 [tool.isort]
 profile = "black"
@@ -45,6 +60,10 @@ exclude = '''
    plenoxels/
 )/
 '''
+
+
+[tool.uv]
+prerelease = "allow"
 
 [tool.uv.sources]
 azure-ml-utils = { path = "../azure-ml-utils", editable = true }
