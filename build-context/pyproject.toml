@@ -1,0 +1,122 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+version = "0.0.1"
+name = "thermal-voxel"
+description = 'thermal-voxel'
+readme = "README.md"
+requires-python = ">=3.10"
+keywords = []
+authors = []
+dependencies = [
+   "meshio >= 5.3.5",
+   "pyvista >= 0.44.1",
+   "mlflow >= 2.16.0",
+   "imageio>=2.37.0",
+   "open3d>=0.19.0",
+   "trimesh>=4.6.4",
+   "scikit-image>=0.25.2",
+   "opencv-python>=4.11.0.86",
+   "torch>=2.6.0",
+   "tyro>=0.9.3",
+   "dataclasses-reverse-cli>=0.0.5",
+]
+
+[project.optional-dependencies]
+azure = [
+   "azure-ai-ml>=1.25.0",
+   "azureml-mlflow>=1.59.0.post1",
+   "debugpy>=1.8.12",
+]
+azure-local = ["azure-ml-utils", "azure-cli>=2.76.0"]
+fem = [
+   "fenics-basix>=0.9.0",
+   "gmsh>=4.13.1",
+   "jax-fem",
+   "jax>=0.4.38",
+   "meshio>=5.3.5",
+   "mlflow>=2.19.0",
+   "petsc>=3.22.1",
+   "pyfiglet>=1.0.2",
+   "pymeshfix>=0.17.0",
+   "scikit-image>=0.25.0",
+   "tetgen>=0.6.5",
+   "trimesh>=4.5.3",
+   "petsc4py>=3.22.2",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["plenoxels", "thermoxels", "thermoxel_fem"]
+
+[tool.isort]
+profile = "black"
+
+[tool.black]
+line-length = 88
+exclude = '''
+/(
+   plenoxels/
+)/
+'''
+
+
+[tool.uv]
+prerelease = "allow"
+
+[tool.uv.sources]
+azure-ml-utils = { path = "../azure-ml-utils", editable = true }
+
+
+[tool.uv.workspace]
+members = [
+   "src/general-thermal",
+   "src/rebel-nerf",
+   "src/rebel-nerf-azure",
+   "src/rebel-shape",
+]
+
+# RUFF
+[tool.ruff]
+line-length = 88
+indent-width = 4
+extend-exclude = ["*.ipynb", "plenoxels/"]
+
+[tool.ruff.lint]
+# Enable Pyflakes (`F`) and a subset of the pycodestyle (`E`)  codes by default.
+# Unlike Flake8, Ruff doesn't enable pycodestyle warnings (`W`) or
+# McCabe complexity (`C901`) by default.
+select = ["E", "F"]
+ignore = ["F722", "F821"]
+
+# Allow fix for all enabled rules (when `--fix`) is provided.
+fixable = ["ALL"]
+unfixable = []
+
+[tool.ruff.format]
+# Like Black, use double quotes for strings.
+quote-style = "double"
+# Like Black, indent with spaces, rather than tabs.
+indent-style = "space"
+# Like Black, respect magic trailing commas.
+skip-magic-trailing-comma = false
+# Like Black, automatically detect the appropriate line ending.
+line-ending = "auto"
+# Enable auto-formatting of code examples in docstrings. Markdown,
+# reStructuredText code/literal blocks and doctests are all supported.
+#
+# This is currently disabled by default, but it is planned for this
+# to be opt-out in the future.
+docstring-code-format = true
+# Set the line length limit used when formatting code snippets in
+# docstrings.
+#
+# This only has an effect when the `docstring-code-format` setting is
+# enabled.
+docstring-code-line-length = "dynamic"
+
+
+[tool.basedpyright]
+typeCheckingMode = "standard"
+deprecateTypingAliases = true
