@@ -28,7 +28,7 @@ class FEMParameters(ReverseCli):
     ckpt_npz_filepath: Path
     output_dir: Path
     num_steps: int = 1
-    dt: float = 1e-5
+    dt: float = 1e-6
     input_dir: Path = Path("")
 
     def __post_init__(self) -> None:
