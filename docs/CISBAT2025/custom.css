@@ -9,6 +9,16 @@ table {
     border: none;
     outline: none;
     text-align: center;
+    table-layout: fixed;
+
+}
+
+thead tr th:first-child,
+tbody tr td:first-child {
+    width: 6em;
+    min-width: 6em;
+    max-width: 6em;
+    word-break: break-all;
 }
 
 th,

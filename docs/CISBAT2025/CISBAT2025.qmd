@@ -35,8 +35,8 @@ format:
 css: custom.css
 ---
 
-## {background-color="#ffffff" visibility="uncounted" transition="slide"}
 
+## Building (energy consumption) statistics
 
 
 <script>
@@ -51,13 +51,6 @@ function handleClick(e) {
 </script>
 
 
-::: {style="margin-top: 275px;"}
-<span style=" font-weight: bold; font-size: 60px; color:#dc0000;">Background</span>
-:::
-
-
-## Building (energy consumption) statistics
-
 :::: {.columns}
 
 ::: {.column width="40%"}
@@ -67,7 +60,7 @@ function handleClick(e) {
 <!-- <li class="fragment" data-fragment-index="3">58% built before 2000 (220 million building units)</li> -->
 <!-- <li class="fragment" data-fragment-index="4">11% with some renovation</li> -->
 <li class="fragment" data-fragment-index="3">Weighted annual energy renovation rate: 1%</li>
-<li class="fragment" data-fragment-index="4">0.2% deep renovation</li>
+<li class="fragment" data-fragment-index="4">Deep renovation: 0.2%</li>
 </ul>
 
 ::: {.fragment}
@@ -75,7 +68,7 @@ Need tools for targeting and monitoring of renovations.
 :::
 
 ::: {.fragment}
-Finite Element Analysis (FEA)
+Finite Element Analysis (FEA) for heat forward problem simulation.
 :::
 
 ::: {.incremental}
@@ -127,11 +120,11 @@ Finite Element Analysis (FEA)
 <!-- ## Existing renovation strategies
 
 ::: {.incremental}
-* Lump parameter based models
-  * Fast
-  * Less accurate
+* Lump parameter-based models
+ * Fast
+ * Less accurate
 * Finite Element Analysis (FEA)
-  * Tedious and error-prone modeling
+ * Tedious and error-prone modeling
 ::: -->
 
 
@@ -159,7 +152,7 @@ It is possible to use computer vision to simplify the generation of volumetric 3
 :::
 
 ::: {.fragment}
-Simplify data collection for building renovation
+Simplify data collection and model generation
 :::
 
 ::: {.fragment style="margin-top: 75px;"}
@@ -198,11 +191,11 @@ Take a sparse set of images of a building and estimate <span class="fragment" da
 ::: {.column width="50%"}
 
 ::: {.fragment fragment-index=1 .fade-in}
-![](../images/synthesized_video_rgb_facade.gif){width="300" style="height: auto;"}
+![](../images/synthesized_video_rgb_facade.gif){width="300"  style="height: auto; margin-left: 20px;"}
 :::
 
 ::: {.fragment fragment-index=2 .fade-in}
-![](../images/LES-thermonerf.gif){width="300" style="height: auto;"}
+![](../images/LES-thermonerf.gif){width="300" style="height: auto;margin-left: 20px;"}
 :::
 
 :::
@@ -217,16 +210,16 @@ Take a sparse set of images of a building and estimate <span class="fragment" da
 :::
 
 ::: {.fragment}
-First method to convert sparse set of RGB+Thermal images to a Volumetric mesh compatible with FEA
+First method to generate volumetric meshes compatible with FEA from a sparse set of RGB+Thermal images
 :::
 <!-- 
 ## Thermoxels
 
-First method to convert sparse set of RGB+Thermal images to a Volumetric mesh compatible with FEA:
+First method to convert a sparse set of RGB+Thermal images to a Volumetric mesh compatible with FEA:
 
 ::: {.incremental}
-* Voxel based representation including RGB and Thermal data
-* Threshold based filtering of voxels
+* Voxel-based representation including RGB and Thermal data
+* Threshold-based filtering of voxels
 * Evaluation over 5 different scenes
 ::: -->
 
@@ -251,9 +244,9 @@ poses = COLMAP(images_rgb)
 # optimize color and temperature on voxels
 thermoxels = Voxels(scene_size)
 while i <= max_iteration:
-  rgb, temperature = thermoxels(images_rgb, images_thermal, poses)
-  loss = Loss(rgb, temperature, rgb_gt, temperature_gt)
-  thermoxels.optimize(loss)
+ rgb, temperature = thermoxels(images_rgb, images_thermal, poses)
+ loss = Loss(rgb, temperature, rgb_gt, temperature_gt)
+ thermoxels.optimize(loss)
 ```
 
 ## Voxel optimization {auto-animate=true}
@@ -301,18 +294,18 @@ while i <= max_iteration:
 
 ::: {.fragment}
 $$
-  L^{\text{rgb}} = L_2^{\text{rgb}} + \lambda_{\text{TV}}^{\text{rgb}} L_{\text{TV}}^{\text{rgb}}
+ L^{\text{rgb}} = L_2^{\text{rgb}} + \lambda_{\text{TV}}^{\text{rgb}} L_{\text{TV}}^{\text{rgb}}
 $$
 :::
 
 ::: {.fragment}
 $$
-  L^T = (1 - \lambda) L_1^{\text{T}} + \lambda_\text{TV}^{\text{T}}L_\text{TV}^{\text{T}}
+ L^T = (1 - \lambda) L_1^{\text{T}} + \lambda_\text{TV}^{\text{T}}L_\text{TV}^{\text{T}}
 $$
 :::
 ::: {.fragment}
 $$
-  L = L^{\text{rgb}} + L^T
+ L = L^{\text{rgb}} + L^T
 $$
 :::
 
@@ -334,9 +327,9 @@ poses = COLMAP(images_rgb)
 # optimize color and temperature on voxels
 thermoxels = Voxels(scene_size)
 while i <= max_iteration:
-  rgb, temperature = thermoxels(images_rgb, images_thermal, poses)
-  loss = Loss(rgb, temperature, rgb_gt, temperature_gt)
-  thermoxels.optimize(loss)
+ rgb, temperature = thermoxels(images_rgb, images_thermal, poses)
+ loss = Loss(rgb, temperature, rgb_gt, temperature_gt)
+ thermoxels.optimize(loss)
 ```
 
 
@@ -348,9 +341,9 @@ while i <= max_iteration:
 poses = COLMAP(images_rgb)
 thermoxels = Voxels(scene_size)
 while i <= max_iteration:
-  rgb, temperature = thermoxels(images_rgb, images_thermal, poses)
-  loss = Loss(rgb, temperature, rgb_gt, temperature_gt)
-  thermoxels.optimize(loss)
+ rgb, temperature = thermoxels(images_rgb, images_thermal, poses)
+ loss = Loss(rgb, temperature, rgb_gt, temperature_gt)
+ thermoxels.optimize(loss)
 # Reconstruct thermal volumetric mesh
 vol_mesh, surface_temperature = filtering(voxels, threshold)
 ```
@@ -364,9 +357,9 @@ vol_mesh, surface_temperature = filtering(voxels, threshold)
 poses = COLMAP(images_rgb)
 thermoxels = Voxels(scene_size)
 while i <= max_iteration:
-  rgb, temperature = thermoxels(images_rgb, images_thermal, poses)
-  loss = Loss(rgb, temperature, rgb_gt, temperature_gt)
-  thermoxels.optimize(loss)
+ rgb, temperature = thermoxels(images_rgb, images_thermal, poses)
+ loss = Loss(rgb, temperature, rgb_gt, temperature_gt)
+ thermoxels.optimize(loss)
 vol_mesh, surface_temperature = filtering(voxels, threshold)
 # Run FEA simulation
 simulation = FEA(vol_mesh, surface_temperature, env_conditions)
@@ -379,6 +372,33 @@ simulation = FEA(vol_mesh, surface_temperature, env_conditions)
 <span style=" font-weight: bold; font-size: 60px; color:#dc0000;">Results</span>
 :::
 
+## Reconstruction Metrics
+
+<!-- ![](images/metrics.png) -->
+
+```{python}
+#| label: fig-empty
+#| fig-cap: "PSNR↑"
+import pandas as pd
+from IPython.display import HTML
+import numpy as np
+
+# Step 1: Create a dictionary of lists
+data = pd.read_csv('empty.csv', keep_default_na=False)
+
+
+# Step 2: Convert the dictionary to a DataFrame
+df = pd.DataFrame(data)
+
+def highlight_max(s, props=''):
+    return np.where(s == np.nanmax(s.values), props, '')
+
+df = df.round(decimals=2)
+df_s = df.style.hide()
+df_s.format(precision=2)
+# df_s = df_s.apply(highlight_max, props='font-weight: 70', axis=0)
+df_s
+```
 
 
 ## Reconstruction Metrics
@@ -387,7 +407,7 @@ simulation = FEA(vol_mesh, surface_temperature, env_conditions)
 
 ```{python}
 #| label: fig-psnr
-#| fig-cap: "PSNR"
+#| fig-cap: "PSNR↑"
 import pandas as pd
 from IPython.display import HTML
 import numpy as np
@@ -412,7 +432,7 @@ df_s
 ::: {.fragment}
 ```{python}
 #| label: fig-ssim
-#| fig-cap: "SSIM"
+#| fig-cap: "SSIM↑"
 import pandas as pd
 from IPython.display import HTML
 
@@ -435,7 +455,7 @@ df_s
 ::: {.fragment}
 ```{python}
 #| label: fig-mae
-#| fig-cap: "MAE"
+#| fig-cap: "MAE↓"
 import pandas as pd
 from IPython.display import HTML
 
@@ -455,7 +475,7 @@ df_s
 :::
 
 
-## Simulation ready models
+## Simulation-ready models
 
 
 ![](images/no_plenoxel_results.png){.absolute top=150 left=20 width="1000" style="height: auto;"}
@@ -474,19 +494,7 @@ df_s
 :::
 
 
-## Conclusion and Future Work
-
-
-::: {.incremental}
-* First method to build 3D models compatible with FEA using sparse RGB images.
-* Metric do not capture mesh quality.
-
-* Future works:
-  * Improve surface approximation.
-  * Integrate material properties.
-:::
-
-## Conclusion
+## Simulation
 
 
 <div class="fragment fade-out" data-fragment-index="1">
@@ -507,9 +515,39 @@ df_s
 <div class="fragment fade-in-then-out" data-fragment-index="5">
 ![](../images/simulation/6.png){.absolute top=0 left=200 width="600" style="height: auto;"}
 </div>
-<div class="fragment fade-in" data-fragment-index="6">
+
+
+## Simulation {auto-animate="true"}
+
 ![](../images/simulation/7.png){.absolute top=0 left=200 width="600" style="height: auto;"}
-</div>
+
+## Conclusion and Future Work {auto-animate="true"}
+
+
+![](../images/simulation/7.png){.absolute top=50 left=450 width="500" style="height: auto;"}
+
+:::: {.columns}
+
+::: {.column width="50%"}
+
+<ul>
+  <li>The first method able to build 3D models compatible with FEA using sparse RGB images.</li>
+  <li class="fragment" data-fragment-index="1">Metrics do not capture mesh quality.</li>
+  <li class="fragment" data-fragment-index="2">Future works:</li>
+  <ul>
+    <li class="fragment" data-fragment-index="3">Improve surface approximation.</li>
+    <li class="fragment" data-fragment-index="4">Integrate material properties.</li>
+  </ul>
+</ul>
+
+:::
+
+
+::: {.column width="50%"}
+
+:::
+
+::::
 
 
 ## References
