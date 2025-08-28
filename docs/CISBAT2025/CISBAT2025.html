@@ -451,22 +451,20 @@ First method to convert a sparse set of RGB+Thermal images to a Volumetric mesh 
 </section>
 <section id="voxel-optimization-1" class="slide level2" data-auto-animate="true">
 <h2 data-id="quarto-animate-title">Voxel optimization</h2>
-<div class="fragment fade-out" data-fragment-index="1">
-<p><img data-src="../images/progress1.png" class="absolute" style="height: auto;top: 50px; left: -50px; width: 900px; "></p>
-</div>
-<div class="fragment fade-in-then-out" data-fragment-index="1">
+<img data-src="../images/progress1.png" class="absolute" style="height: auto;top: 50px; left: -50px; width: 900px; ">
+<div class="fragment fade-in" data-fragment-index="1">
 <p><img data-src="../images/progress2.png" class="absolute" style="height: auto;top: 50px; left: -50px; width: 900px; "></p>
 </div>
-<div class="fragment fade-in-then-out" data-fragment-index="2">
+<div class="fragment fade-in" data-fragment-index="2">
 <p><img data-src="../images/progress3.png" class="absolute" style="height: auto;top: 50px; left: -50px; width: 900px; "></p>
 </div>
-<div class="fragment fade-in-then-out" data-fragment-index="3">
+<div class="fragment fade-in" data-fragment-index="3">
 <p><img data-src="../images/progress4.png" class="absolute" style="height: auto;top: 50px; left: -50px; width: 900px; "></p>
 </div>
-<div class="fragment fade-in-then-out" data-fragment-index="4">
+<div class="fragment fade-in" data-fragment-index="4">
 <p><img data-src="../images/progress5.png" class="absolute" style="height: auto;top: 50px; left: -50px; width: 900px; "></p>
 </div>
-<div class="fragment fade-in-then-out" data-fragment-index="5">
+<div class="fragment fade-in" data-fragment-index="5">
 <p><img data-src="../images/progress6.png" class="absolute" style="height: auto;top: 50px; left: -50px; width: 900px; "></p>
 </div>
 <div class="fragment fade-in" data-fragment-index="6">
@@ -562,63 +560,63 @@ with $\lambda = \frac{1}{2}$
 <h2>Reconstruction Metrics</h2>
 <!-- ![](images/metrics.png) -->
 <div id="cell-fig-empty" class="cell" data-execution_count="1">
-<div id="fig-empty" class="cell-output cell-output-display quarto-float quarto-figure quarto-figure-center" data-execution_count="21">
+<div id="fig-empty" class="cell-output cell-output-display quarto-float quarto-figure quarto-figure-center" data-execution_count="1">
 <figure class="quarto-float quarto-float-fig">
 <div aria-describedby="fig-empty-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
 <style type="text/css">
 </style>
 
-<table id="T_87e29" class="caption-top" data-quarto-postprocess="true">
+<table id="T_ea4fb" class="caption-top" data-quarto-postprocess="true">
 <thead>
 <tr class="header">
-<th id="T_87e29_level0_col0" class="col_heading level0 col0" data-quarto-table-cell-role="th">Method</th>
-<th id="T_87e29_level0_col1" class="col_heading level0 col1" data-quarto-table-cell-role="th">Heated Water Cup</th>
-<th id="T_87e29_level0_col2" class="col_heading level0 col2" data-quarto-table-cell-role="th">Heated Water Kettle</th>
-<th id="T_87e29_level0_col3" class="col_heading level0 col3" data-quarto-table-cell-role="th">Melting Ice Cup</th>
-<th id="T_87e29_level0_col4" class="col_heading level0 col4" data-quarto-table-cell-role="th">Building (spring)</th>
-<th id="T_87e29_level0_col5" class="col_heading level0 col5" data-quarto-table-cell-role="th">Building (winter)</th>
-<th id="T_87e29_level0_col6" class="col_heading level0 col6" data-quarto-table-cell-role="th">Double robot</th>
-<th id="T_87e29_level0_col7" class="col_heading level0 col7" data-quarto-table-cell-role="th">Exhibition Building</th>
-<th id="T_87e29_level0_col8" class="col_heading level0 col8" data-quarto-table-cell-role="th">Dorm 1</th>
-<th id="T_87e29_level0_col9" class="col_heading level0 col9" data-quarto-table-cell-role="th">Dorm 2</th>
+<th id="T_ea4fb_level0_col0" class="col_heading level0 col0" data-quarto-table-cell-role="th">Method</th>
+<th id="T_ea4fb_level0_col1" class="col_heading level0 col1" data-quarto-table-cell-role="th">Heated Water Cup</th>
+<th id="T_ea4fb_level0_col2" class="col_heading level0 col2" data-quarto-table-cell-role="th">Heated Water Kettle</th>
+<th id="T_ea4fb_level0_col3" class="col_heading level0 col3" data-quarto-table-cell-role="th">Melting Ice Cup</th>
+<th id="T_ea4fb_level0_col4" class="col_heading level0 col4" data-quarto-table-cell-role="th">Building (spring)</th>
+<th id="T_ea4fb_level0_col5" class="col_heading level0 col5" data-quarto-table-cell-role="th">Building (winter)</th>
+<th id="T_ea4fb_level0_col6" class="col_heading level0 col6" data-quarto-table-cell-role="th">Double robot</th>
+<th id="T_ea4fb_level0_col7" class="col_heading level0 col7" data-quarto-table-cell-role="th">Exhibition Building</th>
+<th id="T_ea4fb_level0_col8" class="col_heading level0 col8" data-quarto-table-cell-role="th">Dorm 1</th>
+<th id="T_ea4fb_level0_col9" class="col_heading level0 col9" data-quarto-table-cell-role="th">Dorm 2</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td id="T_87e29_row0_col0" class="data row0 col0">ThermoNeRF</td>
-<td id="T_87e29_row0_col1" class="data row0 col1"></td>
-<td id="T_87e29_row0_col2" class="data row0 col2"></td>
-<td id="T_87e29_row0_col3" class="data row0 col3"></td>
-<td id="T_87e29_row0_col4" class="data row0 col4"></td>
-<td id="T_87e29_row0_col5" class="data row0 col5"></td>
-<td id="T_87e29_row0_col6" class="data row0 col6"></td>
-<td id="T_87e29_row0_col7" class="data row0 col7"></td>
-<td id="T_87e29_row0_col8" class="data row0 col8"></td>
-<td id="T_87e29_row0_col9" class="data row0 col9"></td>
+<td id="T_ea4fb_row0_col0" class="data row0 col0">ThermoNeRF</td>
+<td id="T_ea4fb_row0_col1" class="data row0 col1"></td>
+<td id="T_ea4fb_row0_col2" class="data row0 col2"></td>
+<td id="T_ea4fb_row0_col3" class="data row0 col3"></td>
+<td id="T_ea4fb_row0_col4" class="data row0 col4"></td>
+<td id="T_ea4fb_row0_col5" class="data row0 col5"></td>
+<td id="T_ea4fb_row0_col6" class="data row0 col6"></td>
+<td id="T_ea4fb_row0_col7" class="data row0 col7"></td>
+<td id="T_ea4fb_row0_col8" class="data row0 col8"></td>
+<td id="T_ea4fb_row0_col9" class="data row0 col9"></td>
 </tr>
 <tr class="even">
-<td id="T_87e29_row1_col0" class="data row1 col0">Plenoxels_t</td>
-<td id="T_87e29_row1_col1" class="data row1 col1"></td>
-<td id="T_87e29_row1_col2" class="data row1 col2"></td>
-<td id="T_87e29_row1_col3" class="data row1 col3"></td>
-<td id="T_87e29_row1_col4" class="data row1 col4"></td>
-<td id="T_87e29_row1_col5" class="data row1 col5"></td>
-<td id="T_87e29_row1_col6" class="data row1 col6"></td>
-<td id="T_87e29_row1_col7" class="data row1 col7"></td>
-<td id="T_87e29_row1_col8" class="data row1 col8"></td>
-<td id="T_87e29_row1_col9" class="data row1 col9"></td>
+<td id="T_ea4fb_row1_col0" class="data row1 col0">Plenoxels_t</td>
+<td id="T_ea4fb_row1_col1" class="data row1 col1"></td>
+<td id="T_ea4fb_row1_col2" class="data row1 col2"></td>
+<td id="T_ea4fb_row1_col3" class="data row1 col3"></td>
+<td id="T_ea4fb_row1_col4" class="data row1 col4"></td>
+<td id="T_ea4fb_row1_col5" class="data row1 col5"></td>
+<td id="T_ea4fb_row1_col6" class="data row1 col6"></td>
+<td id="T_ea4fb_row1_col7" class="data row1 col7"></td>
+<td id="T_ea4fb_row1_col8" class="data row1 col8"></td>
+<td id="T_ea4fb_row1_col9" class="data row1 col9"></td>
 </tr>
 <tr class="odd">
-<td id="T_87e29_row2_col0" class="data row2 col0">Thermoxels</td>
-<td id="T_87e29_row2_col1" class="data row2 col1"></td>
-<td id="T_87e29_row2_col2" class="data row2 col2"></td>
-<td id="T_87e29_row2_col3" class="data row2 col3"></td>
-<td id="T_87e29_row2_col4" class="data row2 col4"></td>
-<td id="T_87e29_row2_col5" class="data row2 col5"></td>
-<td id="T_87e29_row2_col6" class="data row2 col6"></td>
-<td id="T_87e29_row2_col7" class="data row2 col7"></td>
-<td id="T_87e29_row2_col8" class="data row2 col8"></td>
-<td id="T_87e29_row2_col9" class="data row2 col9"></td>
+<td id="T_ea4fb_row2_col0" class="data row2 col0">Thermoxels</td>
+<td id="T_ea4fb_row2_col1" class="data row2 col1"></td>
+<td id="T_ea4fb_row2_col2" class="data row2 col2"></td>
+<td id="T_ea4fb_row2_col3" class="data row2 col3"></td>
+<td id="T_ea4fb_row2_col4" class="data row2 col4"></td>
+<td id="T_ea4fb_row2_col5" class="data row2 col5"></td>
+<td id="T_ea4fb_row2_col6" class="data row2 col6"></td>
+<td id="T_ea4fb_row2_col7" class="data row2 col7"></td>
+<td id="T_ea4fb_row2_col8" class="data row2 col8"></td>
+<td id="T_ea4fb_row2_col9" class="data row2 col9"></td>
 </tr>
 </tbody>
 </table>
@@ -634,63 +632,63 @@ Figure&nbsp;1: PSNR↑
 <h2>Reconstruction Metrics</h2>
 <!-- ![](images/metrics.png) -->
 <div id="cell-fig-psnr" class="cell" data-execution_count="2">
-<div id="fig-psnr" class="cell-output cell-output-display quarto-float quarto-figure quarto-figure-center" data-execution_count="22">
+<div id="fig-psnr" class="cell-output cell-output-display quarto-float quarto-figure quarto-figure-center" data-execution_count="2">
 <figure class="quarto-float quarto-float-fig">
 <div aria-describedby="fig-psnr-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
 <style type="text/css">
 </style>
 
-<table id="T_a83d9" class="caption-top" data-quarto-postprocess="true">
+<table id="T_92a9b" class="caption-top" data-quarto-postprocess="true">
 <thead>
 <tr class="header">
-<th id="T_a83d9_level0_col0" class="col_heading level0 col0" data-quarto-table-cell-role="th">Method</th>
-<th id="T_a83d9_level0_col1" class="col_heading level0 col1" data-quarto-table-cell-role="th">Heated Water Cup</th>
-<th id="T_a83d9_level0_col2" class="col_heading level0 col2" data-quarto-table-cell-role="th">Heated Water Kettle</th>
-<th id="T_a83d9_level0_col3" class="col_heading level0 col3" data-quarto-table-cell-role="th">Melting Ice Cup</th>
-<th id="T_a83d9_level0_col4" class="col_heading level0 col4" data-quarto-table-cell-role="th">Building (spring)</th>
-<th id="T_a83d9_level0_col5" class="col_heading level0 col5" data-quarto-table-cell-role="th">Building (winter)</th>
-<th id="T_a83d9_level0_col6" class="col_heading level0 col6" data-quarto-table-cell-role="th">Double robot</th>
-<th id="T_a83d9_level0_col7" class="col_heading level0 col7" data-quarto-table-cell-role="th">Exhibition Building</th>
-<th id="T_a83d9_level0_col8" class="col_heading level0 col8" data-quarto-table-cell-role="th">Dorm 1</th>
-<th id="T_a83d9_level0_col9" class="col_heading level0 col9" data-quarto-table-cell-role="th">Dorm 2</th>
+<th id="T_92a9b_level0_col0" class="col_heading level0 col0" data-quarto-table-cell-role="th">Method</th>
+<th id="T_92a9b_level0_col1" class="col_heading level0 col1" data-quarto-table-cell-role="th">Heated Water Cup</th>
+<th id="T_92a9b_level0_col2" class="col_heading level0 col2" data-quarto-table-cell-role="th">Heated Water Kettle</th>
+<th id="T_92a9b_level0_col3" class="col_heading level0 col3" data-quarto-table-cell-role="th">Melting Ice Cup</th>
+<th id="T_92a9b_level0_col4" class="col_heading level0 col4" data-quarto-table-cell-role="th">Building (spring)</th>
+<th id="T_92a9b_level0_col5" class="col_heading level0 col5" data-quarto-table-cell-role="th">Building (winter)</th>
+<th id="T_92a9b_level0_col6" class="col_heading level0 col6" data-quarto-table-cell-role="th">Double robot</th>
+<th id="T_92a9b_level0_col7" class="col_heading level0 col7" data-quarto-table-cell-role="th">Exhibition Building</th>
+<th id="T_92a9b_level0_col8" class="col_heading level0 col8" data-quarto-table-cell-role="th">Dorm 1</th>
+<th id="T_92a9b_level0_col9" class="col_heading level0 col9" data-quarto-table-cell-role="th">Dorm 2</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td id="T_a83d9_row0_col0" class="data row0 col0">ThermoNeRF</td>
-<td id="T_a83d9_row0_col1" class="data row0 col1">32.05</td>
-<td id="T_a83d9_row0_col2" class="data row0 col2">34.04</td>
-<td id="T_a83d9_row0_col3" class="data row0 col3">32.24</td>
-<td id="T_a83d9_row0_col4" class="data row0 col4">26.63</td>
-<td id="T_a83d9_row0_col5" class="data row0 col5">28.75</td>
-<td id="T_a83d9_row0_col6" class="data row0 col6">30.75</td>
-<td id="T_a83d9_row0_col7" class="data row0 col7">33.79</td>
-<td id="T_a83d9_row0_col8" class="data row0 col8">34.10</td>
-<td id="T_a83d9_row0_col9" class="data row0 col9">29.94</td>
+<td id="T_92a9b_row0_col0" class="data row0 col0">ThermoNeRF</td>
+<td id="T_92a9b_row0_col1" class="data row0 col1">32.05</td>
+<td id="T_92a9b_row0_col2" class="data row0 col2">34.04</td>
+<td id="T_92a9b_row0_col3" class="data row0 col3">32.24</td>
+<td id="T_92a9b_row0_col4" class="data row0 col4">26.63</td>
+<td id="T_92a9b_row0_col5" class="data row0 col5">28.75</td>
+<td id="T_92a9b_row0_col6" class="data row0 col6">30.75</td>
+<td id="T_92a9b_row0_col7" class="data row0 col7">33.79</td>
+<td id="T_92a9b_row0_col8" class="data row0 col8">34.10</td>
+<td id="T_92a9b_row0_col9" class="data row0 col9">29.94</td>
 </tr>
 <tr class="even">
-<td id="T_a83d9_row1_col0" class="data row1 col0">Plenoxels_t</td>
-<td id="T_a83d9_row1_col1" class="data row1 col1">31.93</td>
-<td id="T_a83d9_row1_col2" class="data row1 col2">34.40</td>
-<td id="T_a83d9_row1_col3" class="data row1 col3">42.05</td>
-<td id="T_a83d9_row1_col4" class="data row1 col4">35.24</td>
-<td id="T_a83d9_row1_col5" class="data row1 col5">34.62</td>
-<td id="T_a83d9_row1_col6" class="data row1 col6">33.29</td>
-<td id="T_a83d9_row1_col7" class="data row1 col7">27.50</td>
-<td id="T_a83d9_row1_col8" class="data row1 col8">39.24</td>
-<td id="T_a83d9_row1_col9" class="data row1 col9">35.50</td>
+<td id="T_92a9b_row1_col0" class="data row1 col0">Plenoxels_t</td>
+<td id="T_92a9b_row1_col1" class="data row1 col1">31.93</td>
+<td id="T_92a9b_row1_col2" class="data row1 col2">34.40</td>
+<td id="T_92a9b_row1_col3" class="data row1 col3">42.05</td>
+<td id="T_92a9b_row1_col4" class="data row1 col4">35.24</td>
+<td id="T_92a9b_row1_col5" class="data row1 col5">34.62</td>
+<td id="T_92a9b_row1_col6" class="data row1 col6">33.29</td>
+<td id="T_92a9b_row1_col7" class="data row1 col7">27.50</td>
+<td id="T_92a9b_row1_col8" class="data row1 col8">39.24</td>
+<td id="T_92a9b_row1_col9" class="data row1 col9">35.50</td>
 </tr>
 <tr class="odd">
-<td id="T_a83d9_row2_col0" class="data row2 col0">Thermoxels</td>
-<td id="T_a83d9_row2_col1" class="data row2 col1">29.78</td>
-<td id="T_a83d9_row2_col2" class="data row2 col2">30.37</td>
-<td id="T_a83d9_row2_col3" class="data row2 col3">19.99</td>
-<td id="T_a83d9_row2_col4" class="data row2 col4">19.84</td>
-<td id="T_a83d9_row2_col5" class="data row2 col5">22.56</td>
-<td id="T_a83d9_row2_col6" class="data row2 col6">24.16</td>
-<td id="T_a83d9_row2_col7" class="data row2 col7">18.78</td>
-<td id="T_a83d9_row2_col8" class="data row2 col8">10.79</td>
-<td id="T_a83d9_row2_col9" class="data row2 col9">13.85</td>
+<td id="T_92a9b_row2_col0" class="data row2 col0">Thermoxels</td>
+<td id="T_92a9b_row2_col1" class="data row2 col1">29.78</td>
+<td id="T_92a9b_row2_col2" class="data row2 col2">30.37</td>
+<td id="T_92a9b_row2_col3" class="data row2 col3">19.99</td>
+<td id="T_92a9b_row2_col4" class="data row2 col4">19.84</td>
+<td id="T_92a9b_row2_col5" class="data row2 col5">22.56</td>
+<td id="T_92a9b_row2_col6" class="data row2 col6">24.16</td>
+<td id="T_92a9b_row2_col7" class="data row2 col7">18.78</td>
+<td id="T_92a9b_row2_col8" class="data row2 col8">10.79</td>
+<td id="T_92a9b_row2_col9" class="data row2 col9">13.85</td>
 </tr>
 </tbody>
 </table>
@@ -703,49 +701,49 @@ Figure&nbsp;2: PSNR↑
 </div>
 <div class="fragment">
 <div id="cell-fig-ssim" class="cell" data-execution_count="3">
-<div id="fig-ssim" class="cell-output cell-output-display quarto-float quarto-figure quarto-figure-center" data-execution_count="23">
+<div id="fig-ssim" class="cell-output cell-output-display quarto-float quarto-figure quarto-figure-center" data-execution_count="3">
 <figure class="quarto-float quarto-float-fig">
 <div aria-describedby="fig-ssim-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
 <style type="text/css">
 </style>
 
-<table id="T_54655" class="caption-top" data-quarto-postprocess="true">
+<table id="T_d6b1d" class="caption-top" data-quarto-postprocess="true">
 <tbody>
 <tr class="odd">
-<td id="T_54655_row0_col0" class="data row0 col0">ThermoNeRF</td>
-<td id="T_54655_row0_col1" class="data row0 col1">0.92</td>
-<td id="T_54655_row0_col2" class="data row0 col2">0.94</td>
-<td id="T_54655_row0_col3" class="data row0 col3">0.98</td>
-<td id="T_54655_row0_col4" class="data row0 col4">0.92</td>
-<td id="T_54655_row0_col5" class="data row0 col5">0.88</td>
-<td id="T_54655_row0_col6" class="data row0 col6">0.95</td>
-<td id="T_54655_row0_col7" class="data row0 col7">0.97</td>
-<td id="T_54655_row0_col8" class="data row0 col8">0.96</td>
-<td id="T_54655_row0_col9" class="data row0 col9">0.95</td>
+<td id="T_d6b1d_row0_col0" class="data row0 col0">ThermoNeRF</td>
+<td id="T_d6b1d_row0_col1" class="data row0 col1">0.92</td>
+<td id="T_d6b1d_row0_col2" class="data row0 col2">0.94</td>
+<td id="T_d6b1d_row0_col3" class="data row0 col3">0.98</td>
+<td id="T_d6b1d_row0_col4" class="data row0 col4">0.92</td>
+<td id="T_d6b1d_row0_col5" class="data row0 col5">0.88</td>
+<td id="T_d6b1d_row0_col6" class="data row0 col6">0.95</td>
+<td id="T_d6b1d_row0_col7" class="data row0 col7">0.97</td>
+<td id="T_d6b1d_row0_col8" class="data row0 col8">0.96</td>
+<td id="T_d6b1d_row0_col9" class="data row0 col9">0.95</td>
 </tr>
 <tr class="even">
-<td id="T_54655_row1_col0" class="data row1 col0">Plenoxels_t</td>
-<td id="T_54655_row1_col1" class="data row1 col1">0.92</td>
-<td id="T_54655_row1_col2" class="data row1 col2">0.98</td>
-<td id="T_54655_row1_col3" class="data row1 col3">0.96</td>
-<td id="T_54655_row1_col4" class="data row1 col4">0.96</td>
-<td id="T_54655_row1_col5" class="data row1 col5">0.93</td>
-<td id="T_54655_row1_col6" class="data row1 col6">0.92</td>
-<td id="T_54655_row1_col7" class="data row1 col7">0.97</td>
-<td id="T_54655_row1_col8" class="data row1 col8">0.98</td>
-<td id="T_54655_row1_col9" class="data row1 col9">0.97</td>
+<td id="T_d6b1d_row1_col0" class="data row1 col0">Plenoxels_t</td>
+<td id="T_d6b1d_row1_col1" class="data row1 col1">0.92</td>
+<td id="T_d6b1d_row1_col2" class="data row1 col2">0.98</td>
+<td id="T_d6b1d_row1_col3" class="data row1 col3">0.96</td>
+<td id="T_d6b1d_row1_col4" class="data row1 col4">0.96</td>
+<td id="T_d6b1d_row1_col5" class="data row1 col5">0.93</td>
+<td id="T_d6b1d_row1_col6" class="data row1 col6">0.92</td>
+<td id="T_d6b1d_row1_col7" class="data row1 col7">0.97</td>
+<td id="T_d6b1d_row1_col8" class="data row1 col8">0.98</td>
+<td id="T_d6b1d_row1_col9" class="data row1 col9">0.97</td>
 </tr>
 <tr class="odd">
-<td id="T_54655_row2_col0" class="data row2 col0">Thermoxels</td>
-<td id="T_54655_row2_col1" class="data row2 col1">0.83</td>
-<td id="T_54655_row2_col2" class="data row2 col2">0.92</td>
-<td id="T_54655_row2_col3" class="data row2 col3">0.88</td>
-<td id="T_54655_row2_col4" class="data row2 col4">0.90</td>
-<td id="T_54655_row2_col5" class="data row2 col5">0.82</td>
-<td id="T_54655_row2_col6" class="data row2 col6">0.75</td>
-<td id="T_54655_row2_col7" class="data row2 col7">0.86</td>
-<td id="T_54655_row2_col8" class="data row2 col8">0.60</td>
-<td id="T_54655_row2_col9" class="data row2 col9">0.72</td>
+<td id="T_d6b1d_row2_col0" class="data row2 col0">Thermoxels</td>
+<td id="T_d6b1d_row2_col1" class="data row2 col1">0.83</td>
+<td id="T_d6b1d_row2_col2" class="data row2 col2">0.92</td>
+<td id="T_d6b1d_row2_col3" class="data row2 col3">0.88</td>
+<td id="T_d6b1d_row2_col4" class="data row2 col4">0.90</td>
+<td id="T_d6b1d_row2_col5" class="data row2 col5">0.82</td>
+<td id="T_d6b1d_row2_col6" class="data row2 col6">0.75</td>
+<td id="T_d6b1d_row2_col7" class="data row2 col7">0.86</td>
+<td id="T_d6b1d_row2_col8" class="data row2 col8">0.60</td>
+<td id="T_d6b1d_row2_col9" class="data row2 col9">0.72</td>
 </tr>
 </tbody>
 </table>
@@ -759,49 +757,49 @@ Figure&nbsp;3: SSIM↑
 </div>
 <div class="fragment">
 <div id="cell-fig-mae" class="cell" data-execution_count="4">
-<div id="fig-mae" class="cell-output cell-output-display quarto-float quarto-figure quarto-figure-center" data-execution_count="24">
+<div id="fig-mae" class="cell-output cell-output-display quarto-float quarto-figure quarto-figure-center" data-execution_count="4">
 <figure class="quarto-float quarto-float-fig">
 <div aria-describedby="fig-mae-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
 <style type="text/css">
 </style>
 
-<table id="T_eebaf" class="caption-top" data-quarto-postprocess="true">
+<table id="T_74598" class="caption-top" data-quarto-postprocess="true">
 <tbody>
 <tr class="odd">
-<td id="T_eebaf_row0_col0" class="data row0 col0">ThermoNeRF</td>
-<td id="T_eebaf_row0_col1" class="data row0 col1">2.10</td>
-<td id="T_eebaf_row0_col2" class="data row0 col2">2.76</td>
-<td id="T_eebaf_row0_col3" class="data row0 col3">1.57</td>
-<td id="T_eebaf_row0_col4" class="data row0 col4">1.88</td>
-<td id="T_eebaf_row0_col5" class="data row0 col5">0.66</td>
-<td id="T_eebaf_row0_col6" class="data row0 col6">0.91</td>
-<td id="T_eebaf_row0_col7" class="data row0 col7">0.31</td>
-<td id="T_eebaf_row0_col8" class="data row0 col8">0.38</td>
-<td id="T_eebaf_row0_col9" class="data row0 col9">0.75</td>
+<td id="T_74598_row0_col0" class="data row0 col0">ThermoNeRF</td>
+<td id="T_74598_row0_col1" class="data row0 col1">2.10</td>
+<td id="T_74598_row0_col2" class="data row0 col2">2.76</td>
+<td id="T_74598_row0_col3" class="data row0 col3">1.57</td>
+<td id="T_74598_row0_col4" class="data row0 col4">1.88</td>
+<td id="T_74598_row0_col5" class="data row0 col5">0.66</td>
+<td id="T_74598_row0_col6" class="data row0 col6">0.91</td>
+<td id="T_74598_row0_col7" class="data row0 col7">0.31</td>
+<td id="T_74598_row0_col8" class="data row0 col8">0.38</td>
+<td id="T_74598_row0_col9" class="data row0 col9">0.75</td>
 </tr>
 <tr class="even">
-<td id="T_eebaf_row1_col0" class="data row1 col0">Plenoxels_t</td>
-<td id="T_eebaf_row1_col1" class="data row1 col1">0.87</td>
-<td id="T_eebaf_row1_col2" class="data row1 col2">1.41</td>
-<td id="T_eebaf_row1_col3" class="data row1 col3">0.11</td>
-<td id="T_eebaf_row1_col4" class="data row1 col4">1.36</td>
-<td id="T_eebaf_row1_col5" class="data row1 col5">0.40</td>
-<td id="T_eebaf_row1_col6" class="data row1 col6">0.49</td>
-<td id="T_eebaf_row1_col7" class="data row1 col7">1.00</td>
-<td id="T_eebaf_row1_col8" class="data row1 col8">0.32</td>
-<td id="T_eebaf_row1_col9" class="data row1 col9">0.39</td>
+<td id="T_74598_row1_col0" class="data row1 col0">Plenoxels_t</td>
+<td id="T_74598_row1_col1" class="data row1 col1">0.87</td>
+<td id="T_74598_row1_col2" class="data row1 col2">1.41</td>
+<td id="T_74598_row1_col3" class="data row1 col3">0.11</td>
+<td id="T_74598_row1_col4" class="data row1 col4">1.36</td>
+<td id="T_74598_row1_col5" class="data row1 col5">0.40</td>
+<td id="T_74598_row1_col6" class="data row1 col6">0.49</td>
+<td id="T_74598_row1_col7" class="data row1 col7">1.00</td>
+<td id="T_74598_row1_col8" class="data row1 col8">0.32</td>
+<td id="T_74598_row1_col9" class="data row1 col9">0.39</td>
 </tr>
 <tr class="odd">
-<td id="T_eebaf_row2_col0" class="data row2 col0">Thermoxels</td>
-<td id="T_eebaf_row2_col1" class="data row2 col1">0.99</td>
-<td id="T_eebaf_row2_col2" class="data row2 col2">1.15</td>
-<td id="T_eebaf_row2_col3" class="data row2 col3">1.74</td>
-<td id="T_eebaf_row2_col4" class="data row2 col4">5.29</td>
-<td id="T_eebaf_row2_col5" class="data row2 col5">1.27</td>
-<td id="T_eebaf_row2_col6" class="data row2 col6">0.74</td>
-<td id="T_eebaf_row2_col7" class="data row2 col7">1.29</td>
-<td id="T_eebaf_row2_col8" class="data row2 col8">8.87</td>
-<td id="T_eebaf_row2_col9" class="data row2 col9">4.21</td>
+<td id="T_74598_row2_col0" class="data row2 col0">Thermoxels</td>
+<td id="T_74598_row2_col1" class="data row2 col1">0.99</td>
+<td id="T_74598_row2_col2" class="data row2 col2">1.15</td>
+<td id="T_74598_row2_col3" class="data row2 col3">1.74</td>
+<td id="T_74598_row2_col4" class="data row2 col4">5.29</td>
+<td id="T_74598_row2_col5" class="data row2 col5">1.27</td>
+<td id="T_74598_row2_col6" class="data row2 col6">0.74</td>
+<td id="T_74598_row2_col7" class="data row2 col7">1.29</td>
+<td id="T_74598_row2_col8" class="data row2 col8">8.87</td>
+<td id="T_74598_row2_col9" class="data row2 col9">4.21</td>
 </tr>
 </tbody>
 </table>
@@ -829,24 +827,7 @@ Figure&nbsp;4: MAE↓
 </section>
 <section id="simulation" class="slide level2">
 <h2>Simulation</h2>
-<div class="fragment fade-out" data-fragment-index="1">
-<p><img data-src="../images/simulation/1.png" class="absolute" style="height: auto;top: 0px; left: 200px; width: 600px; "></p>
-</div>
-<div class="fragment fade-in-then-out" data-fragment-index="1">
-<p><img data-src="../images/simulation/2.png" class="absolute" style="height: auto;top: 0px; left: 200px; width: 600px; "></p>
-</div>
-<div class="fragment fade-in-then-out" data-fragment-index="2">
-<p><img data-src="../images/simulation/3.png" class="absolute" style="height: auto;top: 0px; left: 200px; width: 600px; "></p>
-</div>
-<div class="fragment fade-in-then-out" data-fragment-index="3">
-<p><img data-src="../images/simulation/4.png" class="absolute" style="height: auto;top: 0px; left: 200px; width: 600px; "></p>
-</div>
-<div class="fragment fade-in-then-out" data-fragment-index="4">
-<p><img data-src="../images/simulation/5.png" class="absolute" style="height: auto;top: 0px; left: 200px; width: 600px; "></p>
-</div>
-<div class="fragment fade-in-then-out" data-fragment-index="5">
-<p><img data-src="../images/simulation/6.png" class="absolute" style="height: auto;top: 0px; left: 200px; width: 600px; "></p>
-</div>
+<p><img data-src="../images/simulation/simulation.gif" class="absolute" style="height: auto;top: 0px; left: 200px; width: 600px; "></p>
 </section>
 <section id="simulation-1" class="slide level2" data-auto-animate="true">
 <h2 data-id="quarto-animate-title">Simulation</h2>

@@ -251,22 +251,20 @@ while i <= max_iteration:
 
 ## Voxel optimization {auto-animate=true}
 
-<div class="fragment fade-out" data-fragment-index="1">
 ![](../images/progress1.png){.absolute top=50 left=-50 width="900" style="height: auto;"}
-</div>
-<div class="fragment fade-in-then-out" data-fragment-index="1">
+<div class="fragment fade-in" data-fragment-index="1">
 ![](../images/progress2.png){.absolute top=50 left=-50 width="900" style="height: auto;"}
 </div>
-<div class="fragment fade-in-then-out" data-fragment-index="2">
+<div class="fragment fade-in" data-fragment-index="2">
 ![](../images/progress3.png){.absolute top=50 left=-50 width="900" style="height: auto;"}
 </div>
-<div class="fragment fade-in-then-out" data-fragment-index="3">
+<div class="fragment fade-in" data-fragment-index="3">
 ![](../images/progress4.png){.absolute top=50 left=-50 width="900" style="height: auto;"}
 </div>
-<div class="fragment fade-in-then-out" data-fragment-index="4">
+<div class="fragment fade-in" data-fragment-index="4">
 ![](../images/progress5.png){.absolute top=50 left=-50 width="900" style="height: auto;"}
 </div>
-<div class="fragment fade-in-then-out" data-fragment-index="5">
+<div class="fragment fade-in" data-fragment-index="5">
 ![](../images/progress6.png){.absolute top=50 left=-50 width="900" style="height: auto;"}
 </div>
 <div class="fragment fade-in" data-fragment-index="6">
@@ -496,26 +494,7 @@ df_s
 
 ## Simulation
 
-
-<div class="fragment fade-out" data-fragment-index="1">
-![](../images/simulation/1.png){.absolute top=0 left=200 width="600" style="height: auto;"}
-</div>
-<div class="fragment fade-in-then-out" data-fragment-index="1">
-![](../images/simulation/2.png){.absolute top=0 left=200 width="600" style="height: auto;"}
-</div>
-<div class="fragment fade-in-then-out" data-fragment-index="2">
-![](../images/simulation/3.png){.absolute top=0 left=200 width="600" style="height: auto;"}
-</div>
-<div class="fragment fade-in-then-out" data-fragment-index="3">
-![](../images/simulation/4.png){.absolute top=0 left=200 width="600" style="height: auto;"}
-</div>
-<div class="fragment fade-in-then-out" data-fragment-index="4">
-![](../images/simulation/5.png){.absolute top=0 left=200 width="600" style="height: auto;"}
-</div>
-<div class="fragment fade-in-then-out" data-fragment-index="5">
-![](../images/simulation/6.png){.absolute top=0 left=200 width="600" style="height: auto;"}
-</div>
-
+![](../images/simulation/simulation.gif){.absolute top=0 left=200 width="600" style="height: auto;"}
 
 ## Simulation {auto-animate="true"}
 
