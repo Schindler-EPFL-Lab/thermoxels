@@ -143,7 +143,7 @@ Finite Element Analysis (FEA) for heat forward problem simulation.
 It is possible to use computer vision to simplify the generation of volumetric 3D models for Finite-Element Analysis (FEA). -->
 
 
-## {background-color="#ffffff" visibility="uncounted" transition="slide"}
+## {visibility="uncounted" transition="slide"}
 
 
 
@@ -191,11 +191,11 @@ Take a sparse set of images of a building and estimate <span class="fragment" da
 ::: {.column width="50%"}
 
 ::: {.fragment fragment-index=1 .fade-in}
-![](../images/synthesized_video_rgb_facade.gif){width="300"  style="height: auto; margin-left: 20px;"}
+![](images/synthesized_video_rgb_facade.gif){width="300"  style="height: auto; margin-left: 20px;"}
 :::
 
 ::: {.fragment fragment-index=2 .fade-in}
-![](../images/LES-thermonerf.gif){width="300" style="height: auto;margin-left: 20px;"}
+![](images/LES-thermonerf.gif){width="300" style="height: auto;margin-left: 20px;"}
 :::
 
 :::
@@ -203,7 +203,7 @@ Take a sparse set of images of a building and estimate <span class="fragment" da
 ::::
 
 
-## {background-color="#fffff" visibility="uncounted" transition="slide"}
+## {visibility="uncounted" transition="slide"}
 
 ::: {style="margin-top: 275px;"}
 <span style=" font-weight: bold; font-size: 60px; color:#dc0000;">Thermoxels</span>
@@ -228,7 +228,7 @@ First method to convert a sparse set of RGB+Thermal images to a Volumetric mesh 
 
 ## Pose extraction {auto-animate="true"}
 
-![](../images/thermoxels1.png){width="900" style="height: auto;"}
+![](images/thermoxels1.png){width="900" style="height: auto;"}
 
 ```python
 # Find poses on RGB with COLMAP
@@ -237,7 +237,7 @@ poses = COLMAP(images_rgb)
 
 ## Voxel optimization {auto-animate=true}
 
-![](../images/thermoxels2.png){width="900" style="height: auto;"}
+![](images/thermoxels2.png){width="900" style="height: auto;"}
 
 ```{.python code-line-numbers="2-7"}
 poses = COLMAP(images_rgb)
@@ -251,24 +251,24 @@ while i <= max_iteration:
 
 ## Voxel optimization {auto-animate=true}
 
-![](../images/progress1.png){.absolute top=50 left=-50 width="900" style="height: auto;"}
+![](images/progress1.png){.absolute top=50 left=-50 width="900" style="height: auto;"}
 <div class="fragment fade-in" data-fragment-index="1">
-![](../images/progress2.png){.absolute top=50 left=-50 width="900" style="height: auto;"}
+![](images/progress2.png){.absolute top=50 left=-50 width="900" style="height: auto;"}
 </div>
 <div class="fragment fade-in" data-fragment-index="2">
-![](../images/progress3.png){.absolute top=50 left=-50 width="900" style="height: auto;"}
+![](images/progress3.png){.absolute top=50 left=-50 width="900" style="height: auto;"}
 </div>
 <div class="fragment fade-in" data-fragment-index="3">
-![](../images/progress4.png){.absolute top=50 left=-50 width="900" style="height: auto;"}
+![](images/progress4.png){.absolute top=50 left=-50 width="900" style="height: auto;"}
 </div>
 <div class="fragment fade-in" data-fragment-index="4">
-![](../images/progress5.png){.absolute top=50 left=-50 width="900" style="height: auto;"}
+![](images/progress5.png){.absolute top=50 left=-50 width="900" style="height: auto;"}
 </div>
 <div class="fragment fade-in" data-fragment-index="5">
-![](../images/progress6.png){.absolute top=50 left=-50 width="900" style="height: auto;"}
+![](images/progress6.png){.absolute top=50 left=-50 width="900" style="height: auto;"}
 </div>
 <div class="fragment fade-in" data-fragment-index="6">
-![](../images/progress7.png){.absolute top=50 left=-50 width="900" style="height: auto;"}
+![](images/progress7.png){.absolute top=50 left=-50 width="900" style="height: auto;"}
 </div>
 
 <!-- :::: {.columns}
@@ -318,7 +318,7 @@ with $\lambda = \frac{1}{2}$
 
 ## Voxel optimization {auto-animate=true}
 
-![](../images/thermoxels2.png){width="900" style="height: auto;"}
+![](images/thermoxels2.png){width="900" style="height: auto;"}
 
 ```{.python code-line-numbers="2-7"}
 poses = COLMAP(images_rgb)
@@ -333,7 +333,7 @@ while i <= max_iteration:
 
 ## Volumetric Mesh Extraction {auto-animate="true"}
 
-![](../images/thermoxels3.png){width="900" style="height: auto;"}
+![](images/thermoxels3.png){width="900" style="height: auto;"}
 
 ```{.python code-line-numbers="7-8"}
 poses = COLMAP(images_rgb)
@@ -349,7 +349,7 @@ vol_mesh, surface_temperature = filtering(voxels, threshold)
 
 ## Finite-Element Analysis {auto-animate="true"}
 
-![](../images/thermoxels.png){width="900" style="height: auto;"}
+![](images/thermoxels.png){width="900" style="height: auto;"}
 
 ```{.python code-line-numbers="9-10"}
 poses = COLMAP(images_rgb)
@@ -364,7 +364,7 @@ simulation = FEA(vol_mesh, surface_temperature, env_conditions)
 ```
 
 
-## {background-color="#fffff" visibility="uncounted" transition="slide"}
+## {visibility="uncounted" transition="slide"}
 
 ::: {style="margin-top: 275px;"}
 <span style=" font-weight: bold; font-size: 60px; color:#dc0000;">Results</span>
@@ -494,16 +494,16 @@ df_s
 
 ## Simulation
 
-![](../images/simulation/simulation.gif){.absolute top=0 left=200 width="600" style="height: auto;"}
+![](images/simulation/simulation.gif){.absolute top=0 left=200 width="600" style="height: auto;"}
 
 ## Simulation {auto-animate="true"}
 
-![](../images/simulation/7.png){.absolute top=0 left=200 width="600" style="height: auto;"}
+![](images/simulation/7.png){.absolute top=0 left=200 width="600" style="height: auto;"}
 
 ## Conclusion and Future Work {auto-animate="true"}
 
 
-![](../images/simulation/7.png){.absolute top=50 left=450 width="500" style="height: auto;"}
+![](images/simulation/7.png){.absolute top=50 left=450 width="500" style="height: auto;"}
 
 :::: {.columns}
 
